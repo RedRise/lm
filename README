@@ -2,7 +2,7 @@ lm v2.0
 
 (c) Jérôme Poisson aka Goffi 2012
     Guillaume Garchery aka Red Rise
-
+******************************************************************************
 
 lm is a software to list movies, loosely inspired from ls. Extra features 
 allow you to download subtitles, and interact with the opensubtitles hash 
