@@ -16,6 +16,15 @@ import zlib
 from unicodedata import normalize
 from difflib import SequenceMatcher
 
+# windows terminal coloration
+from platform import system
+if system().lower()=="windows":
+    try:
+        import colorama
+        colorama.init()
+    except:
+        pass
+
 # ********** GLOBAL VARIABLES ************************************************
 NAME    = 'lm (list movies)'
 VERSION = '2.0'
@@ -35,7 +44,7 @@ OPENSUBTITLE_DOMAIN     = "http://api.opensubtitles.org/xml-rpc"
 def filelist( dir, recurs=True, *ext):
     """ recursive listing of files in a directory matching extension """
     result = []
-    alist = [ os.path.join(dir,f) for f in os.listdir( dir ) ]
+    alist = [ os.path.abspath(os.path.join(dir,f)) for f in os.listdir( dir )]
 
     result.extend( [ f for f in filter( os.path.isfile, alist ) \
         if (not ext or (os.path.splitext(f)[1].lower() in ext)) ] )
@@ -254,6 +263,13 @@ class ListMovies():
         for f in files:
             del self.cache_path[f]
 
+        hashs_remain = [ v['hash'] for v in self.cache_path.values() ]
+        hashs = [ h for h in self.cache_hash.keys() if h not in hashs_remain]
+
+        for h in hashs:
+            del self.cache_hash[h]
+
+
     def save_cache(self):
     # save cache function
     # save both at same time, after 'consistency' check:
@@ -269,11 +285,9 @@ class ListMovies():
     # -> but we delete also every hash (cache_hash)
     # not pointed by a file anymore
 
-        cache_hash = self.cache_hash
         cache_path = self.cache_path
 
         files = [ f for f in files if cache_path.has_key(f)]
-        hashs = [ cache_path[f]['hash'] for f in files ]
 
         if len(files)>0:
             for f in files:
@@ -284,12 +298,6 @@ class ListMovies():
             if confirm:
                 for f in files:
                     del cache_path[f]
-
-                hashs_remain = set([ v['hash'] for v in cache_path.values() ])
-                hashs = [ h for h in hashs if h not in hashs_remain]
-
-                for h in hashs:
-                    del cache_hash[h]
 
                 self.save_cache()
 
@@ -1243,16 +1251,16 @@ if __name__ == "__main__":
 
     files = LM.get_files(args)
 
+    if LM.options.delete_cache:
+        LM.delete_cache(files)
+        sys.exit()
+
     LM.update_caches_with_paths( files )
     LM.update_cache_hash_opensubtitles()
     LM.update_cache_hash_metadata()
-
     files = LM.filter_and_sort_files(files)
 
-    if LM.options.delete_cache:
-        LM.delete_cache(files)
-
-    elif LM.options.confirm:
+    if LM.options.confirm:
         LM.manual_confirm(files)
 
     elif LM.options.upload:
