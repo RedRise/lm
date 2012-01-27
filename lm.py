@@ -476,7 +476,6 @@ class ListMovies():
             log    = server.LogIn(user,password,'en',OPENSUBTITLE_USER_AGENT)
 
             if self.status_ok(log):
-                print( "opensubtitles connection OK")
                 self.server = server
                 self.token  = log['token']
 
@@ -885,15 +884,19 @@ class ListMovies():
         self.login()
         sub_refs = self.server.SearchSubtitles( self.token, query )
 
-        if self.status_ok(sub_refs) and sub_refs['data'] != False:
+        if self.status_ok(sub_refs):
+            if sub_refs['data'] != False:
 
-            sub_ids  = self.download_subtitles_filter(ref,sub_refs['data'])
+                sub_ids  = self.download_subtitles_filter(ref,sub_refs['data'])
 
-            print( " -- list of subtitlesid to donwload")
-            print( sub_ids )
-            subs     = self.download_subtitleids( sub_ids )
+                print( " -- list of subtitlesid to donwload")
+                print( sub_ids )
+                subs     = self.download_subtitleids( sub_ids )
 
-            self.download_subtitles_write(ref,subs)
+                self.download_subtitles_write(ref,subs)
+
+            else:
+                print( "no subtitles found" )
 
         else:
             print( sub_refs )
