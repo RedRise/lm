@@ -270,7 +270,7 @@ What's new in version 0.2
 ++ HTML display with cover, links to trailer and IMDb page
 ++ cache deletion via -d command (possibility to remove only some filtered 
     file names, lm.py -d -f @genre:action)
-++ filtering by size (< and >, @size:>500), and by 'unsure'
+++ filtering by size (+ and - like @size:+500), and by 'unsure'
 ++ recursive search in directory
 ++ windows terminal coloration
 ++ change optionparse to argparse
