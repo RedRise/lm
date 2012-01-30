@@ -224,40 +224,35 @@ class ListMovies():
         self.forbidden_words = ['divx','dvdrip','xvid','ts','dvdscr',
                      'cam','dvdscr','xvid','aac','r5']
 
-        self.default_metadata = {
-            'id'                : None,
-            'title'             : None,
-            'canonical_title'   : None,
-            'rating'            : None,
-            'year'              : None,
-            'genre'             : None,
-            'countries'         : None,
-            'director'          : None,
-            'short_summary'     : None,
-            'summary'           : None,
-            'cast'              : None,
-            'votes'             : None,
-            'cover'             : None,
-            'last_update'       : None,
-            }
-        self.default_opensubtitles = {
-            'imdb_id'   : None,
-            'year'      : None,
-            'title'     : None
-                }
-        self.default_guess = { 'title':None, 'year':None, 'unsure':False }
         self.default_hash = {
-            'opensubtitles'         :None,
-            'metadata'              :None,
-            'opensubtitles_check'   :None,
-            'imdb_check'            :None,
-            'bytesize'              :None,
-            'guess'                 :None
-                }
+            'bytesize'            : None,
+            'imdb_check'          : 0,
+            'm_id'                : None,
+            'm_title'             : None,
+            'm_canonical_title'   : None,
+            'm_rating'            : None,
+            'm_year'              : None,
+            'm_genre'             : None,
+            'm_countries'         : None,
+            'm_director'          : None,
+            'm_short_summary'     : None,
+            'm_summary'           : None,
+            'm_cast'              : None,
+            'm_votes'             : None,
+            'm_cover'             : None,
+            'm_last_update'       : None,
+            'o_imdb_id'           : None,
+            'o_year'              : None,
+            'o_check'             : 0,
+            'o_title'             : None,
+            'g_title'             : None, 
+            'g_year'              : None, 
+            'g_unsure'            : False
+        }
 
         self.default_path = {
             'hash'          : None,
-            'last_update'   : None
+            'last_update'   : 0
             }
 
     # ********** CACHE HANDLERS **********************************************
@@ -353,8 +348,9 @@ class ListMovies():
                         asked. To delete all cache use lm.py cache -d")
         parser.add_argument('-f','--filter',
                 help="filter @keyword:filter1,filter2@keyword2:filter3, \
-                        @genre:action@size:500 will look at action movies \
-                        bigger than 500Mb. @unsure will filter files not\
+                        @genre:action@size:+500 will look at action movies \
+                        bigger than 500Mb, @size:-100 will look at movies\
+                        smaller than 100Mb, @unsure will filter files not\
                         found on opensubtitles with a bad match to imdb \
                         movies")
         parser.add_argument('-l','--long', action="store_true",
@@ -400,7 +396,7 @@ class ListMovies():
             self.options.filter = \
                     self.options.filter.replace('unsure','unsure:')
 
-        if self.options.show:
+        if self.options.show or self.options.show_imdb:
             import webbrowser
             global webbrowser
 
@@ -454,10 +450,6 @@ class ListMovies():
                 if cur_hash and not cache_hash.has_key(cur_hash):
                     cache_hash[cur_hash] = store( self.default_hash )
                     cache_hash[cur_hash]['bytesize'] = os.path.getsize(path)
-                    cache_hash[cur_hash].update( 
-                            opensubtitles = store( self.default_opensubtitles),
-                            metadata      = store( self.default_metadata ),
-                            guess         = store( self.default_guess ))
 
         self.save_cache()
 
@@ -468,8 +460,8 @@ class ListMovies():
 
         cache = self.cache_hash
         hashs = [ h for h in cache.keys() if
-            not cache[h]['opensubtitles']['title'] and \
-                 cache[h]['opensubtitles_check'] < time.time()-3600*6 ]
+            not cache[h]['o_title'] and \
+                 cache[h]['o_check'] < time.time()-3600*6 ]
 
         data = self.get_info_from_opensubtitles( hashs )
         update_count = 0
@@ -477,16 +469,16 @@ class ListMovies():
         for h in hashs:
 
             now = time.time()
-            cache[h]['opensubtitles_check'] = now
+            cache[h]['o_check'] = now
 
             if data.has_key(h):
                 info = data[h]
                 if info:
                     try:
-                        open_info = {'imdb_id':info['MovieImdbID'],
-                                     'title':info['MovieName'],
-                                     'year':info['MovieYear']}
-                        cache[h]['opensubtitles'].update( open_info )
+                        open_info = {'o_imdb_id':info['MovieImdbID'],
+                                       'o_title':info['MovieName'],
+                                        'o_year':info['MovieYear']}
+                        cache[h].update( open_info )
                         update_count += 1
                     except:
                         pass
@@ -586,9 +578,9 @@ class ListMovies():
 
         cache = self.cache_hash
         hashs = [ h for h,v in cache.iteritems() if \
-                        not v['metadata']['last_update'] or 
-                            ( not  v['opensubtitles']['title']  and \
-                                v['metadata']['last_update'] < \
+                        not v['m_last_update'] or 
+                            ( not  v['o_title']  and \
+                                v['m_last_update'] < \
                                     self.path_from_hash(h)['cache_time']) ]
 
         idx, last_len, total = 1, 0, len(hashs)
@@ -622,7 +614,7 @@ class ListMovies():
         try:
 
             # if we have an imdb_id from opensubtitles for this hash
-            imdb_id = cache_hash[cur_hash]['opensubtitles']['imdb_id']
+            imdb_id = cache_hash[cur_hash]['o_imdb_id']
 
             if imdb_id:
 
@@ -634,23 +626,23 @@ class ListMovies():
                 # we need to guess a title, from a file pointing to this hash
                 path  = self.path_from_hash( cur_hash )['path']
                 guess = self.guessed_title_year( path )
-                cache_hash[cur_hash]['guess'].update( guess )
+                cache_hash[cur_hash].update( guess )
 
-                results = self.i.search_movie( guess['title'] )
+                results = self.i.search_movie( guess['g_title'] )
 
                 if results:
-                    best_result, unsure = self.best_match( guess['title'],
-                            guess['year'], results)
-                    cache_hash[cur_hash]['guess']['unsure'] = unsure
+                    best_result, unsure = self.best_match( guess['g_title'],
+                            guess['g_year'], results)
+                    cache_hash[cur_hash]['g_unsure'] = unsure
                     self.i.update(best_result)
                     self.__fill_metadata( cur_hash, best_result)
                 else:
                     self.__fill_metadata( cur_hash, None )
-                    cache_hash[cur_hash]['guess']['unsure'] = True 
+                    cache_hash[cur_hash]['g_unsure'] = True 
 
         except imdb.IMDbError, e:
             print( "Connexion error, current movie: [%s]" % \
-                    imdb_id if imdb_id else guess['title'] )
+                    imdb_id if imdb_id else guess['g_title'] )
             print e
             self.save_cache()
             sys.exit(2)
@@ -739,7 +731,7 @@ class ListMovies():
         if guessed_year < 1800 or 2100 < guessed_year:
             guessed_year = None
 
-        return {'title':title.strip(), 'year':guessed_year}
+        return {'g_title':title.strip(), 'g_year':guessed_year}
 
 
 
@@ -748,40 +740,35 @@ class ListMovies():
     # @param cur_hash: current hash to update
     # @param found: the imdb movie object selected
 
-        current = self.cache_hash[cur_hash]['metadata']
+        current = self.cache_hash[cur_hash]
+
+        current['m_last_update'] = time.time()
 
         if found:
-            current['id']    = found.movieID
-            current['title'] = found.get('title')
-            current['canonical_title']=found.get('smart canonical title')
-            current['rating'] = found.get('rating')
-            current['year']   = found.get('year')
-            current['genre']  = found.get('genre') or []
-            current['countries'] = found.get('countries') or []
-            current['director'] = [director.get('name') for director in
+            current['m_id']    = found.movieID
+            current['m_title'] = found.get('title')
+            current['m_canonical_title']=found.get('smart canonical title')
+            current['m_rating'] = found.get('rating')
+            current['m_year']   = found.get('year')
+            current['m_genre']  = found.get('genre') or []
+            current['m_countries'] = found.get('countries') or []
+            current['m_director'] = [director.get('name') for director in
                     (found.get('director') or [])]
-            current['short_summary'] = found.get('plot outline')
-            current['summary'] = (found.get('plot') or [''])[0]
-            current['cast'] = [ actor.get('name') for actor in
+            current['m_short_summary'] = found.get('plot outline')
+            current['m_summary'] = (found.get('plot') or [''])[0]
+            current['m_cast'] = [ actor.get('name') for actor in
                     (found.get('cast') or [])]
-            current['votes'] = found.get('votes')
-            current['cover'] = found.get('cover url') or []
-            current['last_update'] = time.time()
+            current['m_votes'] = found.get('votes')
+            current['m_cover'] = found.get('cover url') or []
+
         else:
-            current['id'] =  "000000"
-            current['title'] = "000_NOTFOUND_000"
-            current['canonical_title']="000_NOTFOUND_000"
-            current['rating'] = 0
-            current['year']   = 1900
-            current['genre']  = []
-            current['countries'] = []
-            current['director'] = []
-            current['short_summary'] = '.'*20
-            current['summary'] = '.'*20
-            current['cast'] = []
-            current['votes'] = 0
-            current['cover'] = []
-            current['last_update'] = time.time()
+            current.update({
+                    'm_id':'000000', 'm_title':'___NOTFOUND___',
+                    'm_cannonical_title':'___NOTFOUND___',
+                    'm_genre':[],'m_countries':[],
+                    'm_director':[], 'm_cast':[], 'm_cover':[],
+                    'm_votes':0, 'm_summary':'.'*20,'m_rating':0,
+                    'm_year':1900,'m_short_summary':'.'*20})
 
 
     # ********** MANUAL CONFIRMATION *****************************************
@@ -816,11 +803,11 @@ class ListMovies():
 
         try:
 
-            if self.cache_hash[cur_hash]['metadata']['id'] != '000000':
+            if self.cache_hash[cur_hash]['m_id'] != '000000':
                 self.pretty_print(f)
                 confirm = boolean_input("Do you confirm stored info?")
                 if confirm:
-                    self.cache_hash[cur_hash]['guess']['unsure']=False
+                    self.cache_hash[cur_hash]['g_unsure']=False
                     return( True )
 
             input_id = boolean_input("Will you provide an IMDb id?")
@@ -865,15 +852,14 @@ class ListMovies():
 
         files = [ f for f in files if \
                     not self.cache_hash[
-                        self.cache_path[f]['hash']][
-                            'opensubtitles']['imdb_id']]
+                        self.cache_path[f]['hash']]['o_imdb_id']]
         if len(files)>0:
 
             to_upload = []
             for f in files:
 
                 cur_hash = self.cache_path[f]['hash']
-                imdb_id  = self.cache_hash[cur_hash]['metadata']['id']
+                imdb_id  = self.cache_hash[cur_hash]['m_id']
                 bytesize = str(self.cache_hash[cur_hash]['bytesize'])
 
                 self.pretty_print(f)
@@ -893,7 +879,7 @@ class ListMovies():
 
                     for v in to_upload:
                         h = v['moviehash']
-                        self.cache_hash[h]['opensubtitles_check'] = None
+                        self.cache_hash[h]['o_check'] = None
 
                     self.save_cache()
 
@@ -953,12 +939,11 @@ class ListMovies():
             old_subs = [ old for old in filelist(os.path.dirname(f),False) \
                     if re.search(pattern, old) ]
 
-            h      = self.cache_path[f]['hash']
-            osbtls = self.cache_hash[h]['opensubtitles'] != None
-            imdb_id= self.cache_hash[h]['metadata']['id'] if \
-                    self.cache_hash[h].has_key('metadata') else None
-            byte_size = self.cache_hash[h]['bytesize']
-            fn     = os.path.basename(f)
+            h           = self.cache_path[f]['hash']
+            osbtls      = self.cache_hash[h]['o_imdb_id'] != None
+            imdb_id     = self.cache_hash[h]['m_id']
+            byte_size   = self.cache_hash[h]['bytesize']
+            fn          = os.path.basename(f)
 
             if imdb_id and len(old_subs)==0:
                 ref[f] = {'osbtls':osbtls, 'imdb_id':imdb_id, 
@@ -1105,23 +1090,33 @@ class ListMovies():
                 filt = filt[end:] if end else ''
 
                 if filter_type =='size':
+
                     if (len(keys)>1):
                         raise FilterParsingError
                     try:
-                        keys = float(list(keys)[0])
+                        keys = list(keys)[0]
+
+                        if keys[0] in ['-','+']:
+                            sign = 1 if keys[0] == '+' else -1
+                            keys = keys[1:]
+                        else:
+                            sign = 1
+
+                        keys = float(keys)
                     except:
                         raise FilterParsingError
                     files = [ f for f in files if \
-                            keys < os.path.getsize(f)/(1020*1024) ]
+                            sign*keys < sign*os.path.getsize(f)/(1020*1024) ]
                 elif filter_type == 'unsure':
                     files = [ f for f in files if \
                         self.cache_hash[\
-                            self.cache_path[f]['hash']]['guess']['unsure'] ]
+                            self.cache_path[f]['hash']]['g_unsure'] ]
 
                 else:
+                    filter_type = 'm_' + filter_type
                     files = filter( lambda m:\
                         set([key.lower() for
-                        key in self.metadata_from_path(m)[0][filter_type]]).\
+                        key in self.hash_from_path(m)[filter_type]]).\
                                 intersection(keys), files)
         except FilterParsingError:
             print "Invalid filter ! Please read README for syntax"
@@ -1141,36 +1136,24 @@ class ListMovies():
 
 
         if self.options.alphabetical:
-            keyword = 'canonical_title'
+            keyword = 'm_canonical_title'
         else:
-            keyword = 'rating'
+            keyword = 'm_rating'
  
-        def _key(f):
-            metadata = self.metadata_from_path(f)[0]
-            if metadata.has_key(keyword):
-                return( metadata[keyword] )
-            else:
-                return( None )
-
-        files.sort( key=_key, reverse=self.options.reverse)
+        files.sort( key=lambda f: self.hash_from_path(f)[keyword],\
+                reverse=self.options.reverse)
 
         return(files)
 
 
-    def metadata_from_path(self,path):
+    def hash_from_path(self,path):
         try:
-            cur_hash   = self.cache_path[path]['hash']
-            cache_hash = self.cache_hash[cur_hash]
-            metadata = cache_hash['metadata']
-            if cache_hash['guess']:
-                unsure = cache_hash['guess']['unsure']
-            else:
-                unsure = False
-            opensubtitles = cache_hash['opensubtitles']['imdb_id'] != None
+            cur_hash    = self.cache_path[path]['hash']
+            result      = self.cache_hash[cur_hash]
         except:
-            metadata, unsure, opensubtitles = {}, None, False
+            result      = store()
 
-        return (metadata, unsure, opensubtitles)
+        return( result )
 
     # ********** DISPLAYERS **************************************************
     def show_list(self, files):
@@ -1185,25 +1168,24 @@ class ListMovies():
     def pretty_print(self, filename):
     # Print movie with metadata and colors according to arguments
 
-        current, unsure, osbtls = self.metadata_from_path(filename)
-        if not current:
+        h = self.hash_from_path(filename)
+        if not h['m_id']:
             return(0)
 
         values_dict = {'b':self.BLUE,
                        'e':self.END,
                        'header':self.RED + '/!\\ ' + self.END if \
-                               unsure else '',
-                       'title':(self.MAGEN if osbtls else self.YELLOW) + \
-                               to_ascii(current['title']) + \
+                               h['g_unsure'] else '',
+                       'title':(self.MAGEN if h['o_imdb_id'] \
+                               else self.YELLOW)+to_ascii(h['m_title'])+\
                                self.END,
-                       'rating':unicode(current['rating']),
-                       'year':current['year'],
-                       'genre':"%s" % ', '.join(current['genre']),
+                       'rating':unicode(h['m_rating']),
+                       'year':h['m_year'],
+                       'genre':"%s" % ', '.join(h['m_genre']),
                        'filename':os.path.basename(filename),
-                       'director':', '.join(current['director']),
-                       'size': unicode(int( \
-                               os.path.getsize(filename) / (1024*1024)) \
-                               if os.path.exists(filename) else None )
+                       'director':', '.join(h['m_director']),
+                       'size': unicode(int(h['bytesize'] / (1024*1024))) \
+                               if h['bytesize'] else None
                       }
 
         if self.options.very_long:
@@ -1217,14 +1199,14 @@ class ListMovies():
             len_cast_header = len(cast_header) - len(self.BLUE) - len(self.END)
             out_str+=cast_header
             first = True
-            for actor in current['cast']:
+            for actor in h['m_cast']:
                 if first:
                     first = False
                     out_str += actor+'\n'
                 else:
                     out_str+=len_cast_header*u' '+actor+'\n'
             out_str += "\n" + self.BLUE + "summary"+self.END+": %s\n---\n" % \
-                    current['summary']
+                    h['m_summary']
         elif self.options.long:
             out_str = u"%(header)s%(title)s (%(year)s,%(rating)s,%(size)sMo) "
             out_str += "[%(b)s%(genre)s%(e)s] from %(director)s: "
@@ -1233,9 +1215,9 @@ class ListMovies():
         else:
             out_str = u"%(header)s%(title)s (%(filename)s)\n" % values_dict
         sys.stdout.write(out_str.encode('utf-8'))
-        if self.options.outline and current['short_summary']:
+        if self.options.outline and h['m_short_summary']:
             sys.stdout.write(unicode( \
-                    '*** ' + current['short_summary']+'\n').encode('utf-8'))
+                    '*** ' + h['m_short_summary']+'\n').encode('utf-8'))
 
     def html_print(self, files):
     # Show the list of files, using metadata according to arguments
@@ -1256,22 +1238,22 @@ class ListMovies():
                     if count > 0: out_file.write("</tr>")
                     out_file.write("<tr height=200>")
 
-                current, unsure, opsbtls = self.metadata_from_path(f)
-                if current:
+                h = self.hash_from_path(f)
+                if h['m_id']:
                     values_dict = {
-                        'imdb' :'http://www.imdb.com/title/tt'+current['id'],
+                        'imdb' :'http://www.imdb.com/title/tt'+h['m_id'],
                         'file' : os.path.basename(f)[0:20],
-                        'size' : round(os.path.getsize(f)/(1024*1024),1)\
+                        'size' : round(h['bytesize']/(1024*1024),1)\
                         if os.path.exists(f) else 0,
-                        'title': current['title'],
-                        'color': '#FF3333' if unsure else '#808080',
-                        'rating' : str(current['rating']) or 'None',
-                        'votes': str(round(current['votes']/1000,1))+'K' if \
-                                current['votes'] else 'None',
-                        'cover': current['cover'],
-                        'genre': ', '.join(current['genre'][0:2]),
+                        'title': h['m_title'],
+                        'color': '#FF3333' if h['g_unsure'] else '#808080',
+                        'rating' : str(h['m_rating']) or 'None',
+                        'votes': str(round(h['m_votes']/1000,1))+'K' if \
+                                h['m_votes'] else 'None',
+                        'cover': h['m_cover'],
+                        'genre': ', '.join(h['m_genre'][0:2]),
                      'trailer':'http://www.youtube.com/results?search_query='+
-                                alphanum( current['title'],'+')+'+trailer'
+                                alphanum( h['m_title'],'+')+'+trailer'
                                 }
                     # print values_dict
                     finalcell = cell % values_dict
@@ -1280,6 +1262,11 @@ class ListMovies():
             out_file.write("</tr></table>")
         webbrowser.open_new_tab( "file://%s" % self.html_fn )
 
+    def imdb_show(self, files):
+        for f in files:
+            h = self.hash_from_path(f)
+            if h['m_id']:
+                webbrowser.open_new_tab(imdb.imdbURL_movie_main % h['m_id'])
 
 if __name__ == "__main__":
 
@@ -1306,6 +1293,8 @@ if __name__ == "__main__":
     elif LM.options.download:
         LM.download_subtitle(files)
 
+    elif LM.options.show_imdb:
+        LM.imdb_show(files)
     else:
         LM.show_list( files )
 
