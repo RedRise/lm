@@ -1,7 +1,9 @@
-lm v2.0
+lm v0.2
 
-(c) Jérôme Poisson aka Goffi 2012
-    Guillaume Garchery aka Red Rise
+Copyright (C) 2012  Guillaume Garchery 	(polluxxx@gmail.com)
+Copyright (C) 2010  Jérôme Poisson 	(goffi@goffi.org)
+
+
 ******************************************************************************
 
 lm is a software to list movies, loosely inspired from ls. Extra features 
@@ -219,7 +221,7 @@ Examples:
 
     MOVIE SEARCH
 
-    Since v2.0:
+    Since v0.2:
 	1/ Build hash for file 
 	   (see: http://trac.opensubtitles.org/projects/opensubtitles/wiki/XMLRPC)
 	2/ Call opensubtitle through XMLRPC call. Do they know this hash?
@@ -253,11 +255,11 @@ You can participate by uploading some
 Contact:
 
 Creator: goffi@goffi.org 	(http://www.goffi.org)
-v2.0   : polluxxx@gmail.com 	(http://redrises.blogspot.com)
+v0.2   : polluxxx@gmail.com 	(http://redrises.blogspot.com)
 
 5 ----- CHANGES LOG -----------------------------------------------------------
 
-What's new in version 2.0
+What's new in version 0.2
 
 ++ interactive confirmation process ("--confirm" parameter)
 ++ Subtitles downloads ("--download language" parameter)

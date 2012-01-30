@@ -1,9 +1,29 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+"""
+lm: list movies (or list media)
+
+Copyright (C) 2012  Guillaume Garchery 	(polluxxx@gmail.com)
+Copyright (C) 2010  Jérôme Poisson 	(goffi@goffi.org)
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+
 import os
 import sys
-import pickle
+import cPickle
 import argparse
 import struct
 import xmlrpclib
@@ -27,12 +47,24 @@ if system().lower()=="windows":
 
 # ********** GLOBAL VARIABLES ************************************************
 NAME    = 'lm (list movies)'
-VERSION = '2.0'
-ABOUT   = NAME + " v" + VERSION+""" (c) Jérôme Poisson (aka Goffi) 2010"""
+VERSION	= '0.2'
+ABOUT 	= NAME+" v"+VERSION+""" (c) Jérôme Poisson (aka Goffi) 2010
+
+---
+"""+NAME+""" Copyright 
+(C) 2012  Guillaume Garchery 	<http://redrises.blogspot.com>
+(C) 2010  Jérôme Poisson 	<http://www.goffi.org>
+This program comes with ABSOLUTELY NO WARRANTY;
+This is free software, and you are welcome to redistribute it
+under certain conditions.
+---
+
+This software is a command line tool for listing movies using IMDb metadata
+"""
 
 # User agent is essential to request opensubtitles
 # be sure to update it before any change
-OPENSUBTITLE_USER_AGENT = "lm v2.0"
+OPENSUBTITLE_USER_AGENT = "lm v" + VERSION
 OPENSUBTITLE_DOMAIN     = "http://api.opensubtitles.org/xml-rpc"
 
 
@@ -234,26 +266,26 @@ class ListMovies():
     def load_cache_path(self):
         try:
             with open(self.cache_path_fn,'r') as f:
-                self.cache_path = pickle.load(f)
+                self.cache_path = cPickle.load(f)
         except:
             self.cache_path = store()
             self.cache_path.static = False
 
     def _save_cache_path(self):
         with open(self.cache_path_fn,'w') as f:
-            pickle.dump(self.cache_path,f)
+            cPickle.dump(self.cache_path,f)
 
     def load_cache_hash(self):
         try:
             with open(self.cache_hash_fn,'r') as f:
-                self.cache_hash = pickle.load(f)
+                self.cache_hash = cPickle.load(f)
         except:
             self.cache_hash = store()
             self.cache_hash.static = False
 
     def _save_cache_hash(self):
         with open(self.cache_hash_fn,'w') as f:
-            pickle.dump(self.cache_hash,f)
+            cPickle.dump(self.cache_hash,f)
 
     def _sync_cache(self):
     # delete self.cache_path items pointing whose hash isnt pointing
@@ -345,7 +377,10 @@ class ListMovies():
         parser.add_argument('--download',
                 help="Look for available subtitles for specific language.\
                         Use ISO639-1 codes, like eng/fre/dut/ger")
-        parser.add_argument('-s', '--show', action="store_true",
+        parser.add_argument('-s', '--show-imdb', action="store_true",
+                help="Show IMDb webpage of each movie in default navigator\
+			(don't use if you're listing a lot of files!)")
+        parser.add_argument('-S', '--show', action="store_true",
                 help="Show a sumup html page, with covers and usefull links")
         parser.add_argument( 'files', nargs="*",
                 help="media files to check, by default looks at current dir")
