@@ -48,17 +48,16 @@ if system().lower()=="windows":
 # ********** GLOBAL VARIABLES ************************************************
 NAME    = 'lm (list movies)'
 VERSION	= '0.2'
-ABOUT 	= NAME+" v"+VERSION+""" (c) Jérôme Poisson (aka Goffi) 2010
+ABOUT 	= NAME+" v"+VERSION+"""
 
 ---
-"""+NAME+""" Copyright 
+"""+NAME+""" Copyrights: 
 (C) 2012  Guillaume Garchery 	<http://redrises.blogspot.com>
 (C) 2010  Jérôme Poisson 	<http://www.goffi.org>
 This program comes with ABSOLUTELY NO WARRANTY;
 This is free software, and you are welcome to redistribute it
 under certain conditions.
 ---
-
 This software is a command line tool for listing movies using IMDb metadata
 """
 
@@ -339,8 +338,8 @@ class ListMovies():
 
     # ********** ARGUMENTS HANDLER *******************************************
     def parse_arguments(self):
-        _desc = "%s (version %s)" % ( NAME, VERSION )
-        parser = argparse.ArgumentParser(description=_desc)
+
+        parser = argparse.ArgumentParser(description=ABOUT)
 
         parser.add_argument('-a','--alphabetical',
                 action="store_true",default=False,
