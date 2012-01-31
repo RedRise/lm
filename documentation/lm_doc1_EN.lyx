@@ -67,30 +67,95 @@ lm: list movies
 lm is a software to list movies, loosely inspired from ls.
  Extra features allow you to download subtitles, and interact with the opensubti
 tles hash database.
+ lm is not english oriented, and can provide information for all filenames.
 \end_layout
 
 \begin_layout Section
 Introduction
 \end_layout
 
-\begin_layout Section
+\begin_layout Subsection
+History
+\end_layout
+
+\begin_layout Standard
+The starting point of this little project comes from Goffi (http://www.goffi.org).
+ The idea was to build a terminal tool to list/filter/sort movies in current
+ directory, using IMDbPy module [LINK] to get all metadata information.
+ When I saw the script, few months ago, I just made some modifications I
+ though useful like displaying results in an html page with links to trailers,
+ etc...
+ Little by little, *lm* became a great tool to keep a track of files without
+ too much effort.
+\end_layout
+
+\begin_layout Subsection
 Brief features overview
+\end_layout
+
+\begin_layout Standard
+Here is a short list of what you can do with *lm*:
+\end_layout
+
+\begin_layout Itemize
+list all movie files in current directory (recursive search) in your terminal
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+filter by genre, actor, country, file size
+\end_layout
+
+\begin_layout Itemize
+sort by name, rating
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+export this list to an html view
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+with cover
+\end_layout
+
+\begin_layout Itemize
+link to trailers and IMDb page
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+download subtitles in any languages (source opensubtitles)
 \end_layout
 
 \begin_layout Section
 Installation
 \end_layout
 
+\begin_layout Standard
+*lm* uses IMDbPY module to gather movies metadata, and opensubtitles hash
+ database through xmlrpclib (in standard python library)
+\end_layout
+
+\begin_layout Subsubsection*
+IMDbPy (required)
+\end_layout
+
+\begin_layout Subsubsection*
+colorama (optional, for windows users only)
+\end_layout
+
 \begin_layout Section
 Features in details
 \end_layout
 
-\begin_layout Section
-Miscellaneous
+\begin_layout Subsection
+Basic call
 \end_layout
 
-\begin_layout Standard
-
+\begin_layout Section
+Miscellaneous
 \end_layout
 
 \begin_layout Standard
