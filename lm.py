@@ -289,11 +289,11 @@ class ListMovies():
         for f in files:
             del self.cache_path[f]
 
-        hashs_remain = [ v['hash'] for v in self.cache_path.values() ]
-        hashs = [ h for h in self.cache_hash.keys() if h not in hashs_remain]
+        #hashs_remain = [ v['hash'] for v in self.cache_path.values() ]
+        #hashs = [ h for h in self.cache_hash.keys() if h not in hashs_remain]
 
-        for h in hashs:
-            del self.cache_hash[h]
+        #for h in hashs:
+        #    del self.cache_hash[h]
 
 
     def save_cache(self):
