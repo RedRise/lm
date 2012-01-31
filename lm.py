@@ -561,7 +561,7 @@ class ListMovies():
     # return a dictionary, 'path', 'cache_time', 'file_time'
 
         path = [ (k,v['last_update']) for k,v in self.cache_path.iteritems() \
-                if v['hash'] == cur_hash ]
+                if v['hash'] == cur_hash and os.path.exists(k) ]
 
         if len(path)>0:
             update_time = [ k[1] for k in path ]
@@ -588,11 +588,17 @@ class ListMovies():
     # our last imdb call -> we call imdb again
 
         cache = self.cache_hash
-        hashs = [ h for h,v in cache.iteritems() if \
-                        not v['m_last_update'] or 
-                            ( not  v['o_title']  and \
-                                v['m_last_update'] < \
-                                    self.path_from_hash(h)['cache_time']) ]
+        hashs = []
+        for h,v in cache.iteritems(): 
+
+            p_info       = self.path_from_hash(h)
+            if p_info:
+                path, c_time = p_info['path'], p_info['cache_time']
+                updt_after   = not v['o_title'] and v['m_last_update']<c_time
+                path_exists  = os.path.exists(path)
+
+                if path_exists and (not v['m_last_update'] or updt_after):
+                    hashs.append(h)
 
         idx, last_len, total = 1, 0, len(hashs)
 
