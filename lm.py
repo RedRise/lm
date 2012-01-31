@@ -188,7 +188,7 @@ class ListMovies():
         self.cache_hash_fn = os.path.join( cache_dir, 'cache_hash')
 
         # html output sumup file
-        self.html_fn  = os.path.join( cache_dir, '_html_sumup.html')
+        self.html_fn  = os.path.join( cache_dir, 'html_sumup.html')
 
         self.load_cache_path()
         self.load_cache_hash()
@@ -330,6 +330,13 @@ class ListMovies():
         else:
             print("no file to delete")
 
+    def reset_cache_files(self):
+        if os.path.exists(self.cache_path_fn):
+            os.remove(self.cache_path_fn)
+        if os.path.exists(self.cache_hash_fn):
+            os.remove(self.cache_hash_fn)
+        if os.path.exists(self.html_fn):
+            os.remove(self.html_fn)
 
     # ********** ARGUMENTS HANDLER *******************************************
     def parse_arguments(self):
@@ -379,6 +386,10 @@ class ListMovies():
                 help="Show a sumup html page, with covers and usefull links")
         parser.add_argument( 'files', nargs="*",
                 help="media files to check, by default looks at current dir")
+        parser.add_argument('--reset', action="store_true",
+                help="Delete all cache files (use it when corrupted")
+        parser.add_argument('--version', action="store_true",
+                help="Display current version")
 
         self.options = parser.parse_args()
         args = self.options.files
@@ -1272,6 +1283,14 @@ if __name__ == "__main__":
 
     LM    = ListMovies()
     args  = LM.parse_arguments()
+
+    if LM.options.reset:
+        LM.reset_cache_files()
+        sys.exit()
+
+    if LM.options.version:
+        print( VERSION )
+        sys.exit()
 
     files = LM.get_files(args)
 
