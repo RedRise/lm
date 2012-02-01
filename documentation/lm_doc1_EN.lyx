@@ -60,14 +60,15 @@
 \begin_body
 
 \begin_layout Title
-lm: list movies
+lm: list movies, a command-line tool
 \end_layout
 
 \begin_layout Abstract
-lm is a software to list movies, loosely inspired from ls.
+*lm* is a command-line software that lists movies, loosely inspired from
+ ls.
  Extra features allow you to download subtitles, and interact with the opensubti
 tles hash database.
- lm is not english oriented, and can provide information for all filenames.
+ *lm* is not english oriented, and can provide information for all filenames.
 \end_layout
 
 \begin_layout Section
@@ -79,7 +80,8 @@ History
 \end_layout
 
 \begin_layout Standard
-The starting point of this little project comes from Goffi (http://www.goffi.org).
+he starting point of this little project is here from Goffi (http://www.goffi.org)
+ at Goffi's website.
  The idea was to build a terminal tool to list/filter/sort movies in current
  directory, using IMDbPy module [LINK] to get all metadata information.
  When I saw the script, few months ago, I just made some modifications I
@@ -142,8 +144,41 @@ Installation
 IMDbPy (required)
 \end_layout
 
+\begin_layout Standard
+web page: http://imdbpy.sourceforge.net/ 
+\end_layout
+
+\begin_layout Standard
+Check the very complete official download page http://imdbpy.sourceforge.net/downl
+oads.html, you will probably see it available in the package repository of
+ your distribution.
+ Some un/official installers are built for Mac Os X and Windows.
+\end_layout
+
+\begin_layout Standard
+IMDbPY requires 'lxml' module to speed up parsing.
+ If it's not installed, be sure to have BeautifulSoup http://www.crummy.com/softwa
+re/BeautifulSoup/instead.
+ 
+\end_layout
+
+\begin_layout Standard
+Note: If you want to go through the source install, you can just select
+ the minimal configuration.
+\end_layout
+
 \begin_layout Subsubsection*
 colorama (optional, for windows users only)
+\end_layout
+
+\begin_layout Standard
+web page: http://pypi.python.org/pypi/colorama
+\end_layout
+
+\begin_layout Standard
+lm is mainly designed to return result on a terminal, as 'ls' function.
+ to 'map' terminal coloration on the windows terminal, please install the
+ following package
 \end_layout
 
 \begin_layout Section
@@ -151,20 +186,15 @@ Features in details
 \end_layout
 
 \begin_layout Subsection
-Basic call
+Basic calls
+\end_layout
+
+\begin_layout LyX-Code
+python lm.py YOUR_DIR_TO_SCAN
 \end_layout
 
 \begin_layout Section
 Miscellaneous
-\end_layout
-
-\begin_layout Standard
-1.1 Python packages 1.2 Note for Windows users about terminal coloration 2
- HOW TO USE IT 2.0 Basic things about script and PATH 2.1 How to make it return
- interesting command lines 2.2 Colors Meanings 2.3 Principal arguments 2.4
- Focus on filtering files by genre, actor, size 2.5 Download subtitles 3
- MECHANISMS 4 CREDITS 5 CHANGES LOG ********************************************
-**********************************
 \end_layout
 
 \begin_layout Standard
@@ -198,33 +228,6 @@ python lm.py YOU_DIR_TO_SCAN -s -a will display in an HTML page, your movies
 \begin_layout Standard
 python lm.py YOU_DIR_TO_SCAN --download ger will download the 3 best subtitles
  match, for every movie in you dir
-\end_layout
-
-\begin_layout Standard
-1 ----- INSTALLATION ----------------------------------------------------------
-\end_layout
-
-\begin_layout Standard
-1.1 Python packages
-\end_layout
-
-\begin_layout Standard
-You will need the following packages: - IMDbPY: http://imdbpy.sourceforge.net/
- * accessible on Ubuntu software center easily (look for pyhton-imdbpy)
- * installation may be more complicated for windows users To run properly,
- lm only needs imdb package at its minimal form Note: IMDbPY requires 'lxml'
- to speed up parsing.
- If not installed, be sure to have 'BeautifulSoup' package.
-\end_layout
-
-\begin_layout Standard
-1.2 Note for Windows users about terminal coloration
-\end_layout
-
-\begin_layout Standard
-lm is principaly designed to return result on a terminal, as 'ls' function.
- to 'map' terminal coloration on the windows terminal, please install the
- following package: - colorama: http://pypi.python.org/pypi/colorama
 \end_layout
 
 \begin_layout Standard
