@@ -63,7 +63,7 @@ This software is a command line tool for listing movies using IMDb metadata
 
 # User agent is essential to request opensubtitles
 # be sure to update it before any change
-OPENSUBTITLE_USER_AGENT = "lm v" + VERSION
+OPENSUBTITLE_USER_AGENT = "lm v2.0"
 OPENSUBTITLE_DOMAIN     = "http://api.opensubtitles.org/xml-rpc"
 
 
@@ -844,8 +844,8 @@ class ListMovies():
                 agree = boolean_input('Confirm this result?') 
                 if agree:
                     self.__fill_metadata (cur_hash, result)
-                    self.cache_hash[cur_hash]['guess'] = \
-                        { 'title':title, 'year':year, 'unsure':False }
+                    self.cache_hash[cur_hash].update(\
+                        { 'g_title':title, 'g_year':year, 'g_unsure':False })
                     self.save_cache()
                     print("movie saved")
                     return( True )
