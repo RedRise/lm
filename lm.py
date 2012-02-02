@@ -331,12 +331,14 @@ class ListMovies():
             print("no file to delete")
 
     def reset_cache_files(self):
-        if os.path.exists(self.cache_path_fn):
-            os.remove(self.cache_path_fn)
-        if os.path.exists(self.cache_hash_fn):
-            os.remove(self.cache_hash_fn)
-        if os.path.exists(self.html_fn):
-            os.remove(self.html_fn)
+        confirm = boolean_input("Confirm cache files deletion?")
+        if confirm:
+            if os.path.exists(self.cache_path_fn):
+                os.remove(self.cache_path_fn)
+            if os.path.exists(self.cache_hash_fn):
+                os.remove(self.cache_hash_fn)
+            if os.path.exists(self.html_fn):
+                os.remove(self.html_fn)
 
     # ********** ARGUMENTS HANDLER *******************************************
     def parse_arguments(self):
