@@ -783,7 +783,7 @@ class ListMovies():
         else:
             current.update({
                     'm_id':'000000', 'm_title':'___NOTFOUND___',
-                    'm_cannonical_title':'___NOTFOUND___',
+                    'm_canonical_title':'___NOTFOUND___',
                     'm_genre':[],'m_countries':[],
                     'm_director':[], 'm_cast':[], 'm_cover':[],
                     'm_votes':0, 'm_summary':'.'*20,'m_rating':0,
