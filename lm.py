@@ -1026,7 +1026,6 @@ class ListMovies():
 
                     sub_d = base64.standard_b64decode(sub['data'])
                     sub_d = zlib.decompress( sub_d, 47 )
-                    sub_d = unicode( sub_d, 'latin' )
                     subs[sub['idsubtitlefile']] = sub_d
             else:
                 print( "Error when downloading subtitles ids, no data")
@@ -1051,7 +1050,7 @@ class ListMovies():
                 for i in range(len(keep)):
                     sub_file = os.path.splitext(k)[0] + '_' + lang.upper() + \
                             '_LM' + str(i+1) + '.srt'
-                    f = codecs.open(sub_file,'w','utf-8')
+                    f = codecs.open(sub_file,'wb')
                     f.write(subs[keep[i]])
                     f.close()
 
