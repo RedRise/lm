@@ -51,7 +51,7 @@ VERSION	= '0.2'
 ABOUT 	= NAME+" v"+VERSION+"""
 
 ---
-"""+NAME+""" Copyrights: 
+"""+NAME+""" Copyrights:
 (C) 2012  Guillaume Garchery 	<http://redrises.blogspot.com>
 (C) 2010  Jérôme Poisson 	<http://www.goffi.org>
 This program comes with ABSOLUTELY NO WARRANTY;
@@ -85,39 +85,39 @@ def filelist( dir, recurs=True, *ext):
     return result
 
 # opensubtitle hash function
-def hashFile(name): 
+def hashFile(name):
     try:
 
-        longlongformat = 'q'  # long long 
-        bytesize = struct.calcsize(longlongformat) 
+        longlongformat = 'q'  # long long
+        bytesize = struct.calcsize(longlongformat)
 
-        f = open(name, "rb") 
+        f = open(name, "rb")
 
-        filesize = os.path.getsize(name) 
-        hash = filesize 
+        filesize = os.path.getsize(name)
+        hash = filesize
 
-        if filesize < 65536 * 2: 
-                return "SizeError" 
+        if filesize < 65536 * 2:
+                return "SizeError"
 
-        for x in range(65536/bytesize): 
-                buffer = f.read(bytesize) 
-                (l_value,)= struct.unpack(longlongformat, buffer)  
-                hash += l_value 
-                hash = hash & 0xFFFFFFFFFFFFFFFF #to remain as 64bit number  
+        for x in range(65536/bytesize):
+                buffer = f.read(bytesize)
+                (l_value,)= struct.unpack(longlongformat, buffer)
+                hash += l_value
+                hash = hash & 0xFFFFFFFFFFFFFFFF #to remain as 64bit number
 
 
-        f.seek(max(0,filesize-65536),0) 
-        for x in range(65536/bytesize): 
-                buffer = f.read(bytesize) 
-                (l_value,)= struct.unpack(longlongformat, buffer)  
-                hash += l_value 
-                hash = hash & 0xFFFFFFFFFFFFFFFF 
+        f.seek(max(0,filesize-65536),0)
+        for x in range(65536/bytesize):
+                buffer = f.read(bytesize)
+                (l_value,)= struct.unpack(longlongformat, buffer)
+                hash += l_value
+                hash = hash & 0xFFFFFFFFFFFFFFFF
 
-        f.close() 
-        returnedhash =  "%016x" % hash 
-        return returnedhash 
+        f.close()
+        returnedhash =  "%016x" % hash
+        return returnedhash
 
-    except(IOError): 
+    except(IOError):
             return "IOError"
 
 # keeps only ascii alpha numeric character
@@ -245,8 +245,8 @@ class ListMovies():
             'o_year'              : None,
             'o_check'             : 0,
             'o_title'             : None,
-            'g_title'             : None, 
-            'g_year'              : None, 
+            'g_title'             : None,
+            'g_year'              : None,
             'g_unsure'            : False
         }
 
@@ -348,7 +348,7 @@ class ListMovies():
         parser.add_argument('-a','--alphabetical',
                 action="store_true",default=False,
                 help="sort by alphabetical order of title instead of rating")
-        parser.add_argument('-r','--reverse', 
+        parser.add_argument('-r','--reverse',
                 action="store_true", default=False,
                 help="show media in reverse order")
         parser.add_argument('-d','--delete_cache',
@@ -468,7 +468,7 @@ class ListMovies():
 
     def update_cache_hash_opensubtitles(self):
     # Update cache_hash opensubtitles info
-    # For movies which hash was not found in opensubtitles, will be tried 
+    # For movies which hash was not found in opensubtitles, will be tried
     # again only 6 hours after
 
         cache = self.cache_hash
@@ -591,7 +591,7 @@ class ListMovies():
 
         cache = self.cache_hash
         hashs = []
-        for h,v in cache.iteritems(): 
+        for h,v in cache.iteritems():
 
             p_info       = self.path_from_hash(h)
             if p_info:
@@ -614,7 +614,7 @@ class ListMovies():
             self.__get_metadata(h)
             cache[h]['imdb_check'] = time.time()
 
-            if idx % 10 == 0: 
+            if idx % 10 == 0:
                 self.save_cache()
             idx += 1
 
@@ -657,7 +657,7 @@ class ListMovies():
                     self.__fill_metadata( cur_hash, best_result)
                 else:
                     self.__fill_metadata( cur_hash, None )
-                    cache_hash[cur_hash]['g_unsure'] = True 
+                    cache_hash[cur_hash]['g_unsure'] = True
 
         except imdb.IMDbError, e:
             print( "Connexion error, current movie: [%s]" % \
@@ -671,7 +671,7 @@ class ListMovies():
     def best_match(self, guess_title, guess_year, results=None):
         # Check match between the found movie and original filename
 
-        if not results: 
+        if not results:
             results = self.i.search_movie( guess_title )
 
         _guessed_title = alphanum( guess_title ).lower()
@@ -836,14 +836,14 @@ class ListMovies():
             else:
                 title =raw_input('please enter movie title:')
                 year  =raw_input('please enter year, leave blank if unknown:')
-                if year=='': 
+                if year=='':
                     year = None
                 result, unsure = self.best_match( title, year )
 
             if result:
                 print( '--> movie found title: %s' % result['title'] )
                 print( '--> movie found  year: %s' % result['year'] )
-                agree = boolean_input('Confirm this result?') 
+                agree = boolean_input('Confirm this result?')
                 if agree:
                     self.__fill_metadata (cur_hash, result)
                     self.cache_hash[cur_hash].update(\
@@ -864,8 +864,8 @@ class ListMovies():
 
     # ********** UPLOAD HASH TO OPENSUBTITLES ********************************
     def upload_to_opensubtitles(self, files):
-    # filter a list of files to get only those which hash was not 
-    # found in opensubtitles, and will ask the user if he wants to 
+    # filter a list of files to get only those which hash was not
+    # found in opensubtitles, and will ask the user if he wants to
     # send the couple (imdb_id, hash) to opensubtitles.
     # @param files: a list of absolute path
 
@@ -965,7 +965,7 @@ class ListMovies():
             fn          = os.path.basename(f)
 
             if imdb_id and len(old_subs)==0:
-                ref[f] = {'osbtls':osbtls, 'imdb_id':imdb_id, 
+                ref[f] = {'osbtls':osbtls, 'imdb_id':imdb_id,
                           'file':fn, 'hash':h }
                 if osbtls:
                     query.append({ 'sublanguageid':lang,
@@ -981,7 +981,7 @@ class ListMovies():
     def download_subtitles_filter(self, ref, subs):
     # filters subs (list result of SearchSubtitles call)
     # and associates to each ref key, bests found subtitles (hash match)
-    # or most downloaded subtitles 
+    # or most downloaded subtitles
     # @param ref: output[0] of download_subtitles_query
     # @param subs: result['data'] of a SearchSubtitles XMLRPC call
 
@@ -1065,7 +1065,9 @@ class ListMovies():
             for arg in args:
                 if not arg:
                     continue        #we don't want empty arg
-                real_path = os.path.expanduser(arg).decode('utf-8')
+                arg = arg.decode(sys.getfilesystemencoding())
+
+                real_path = os.path.expanduser(arg) #.decode('utf-8')
 
                 if arg == real_path and not os.path.exists(arg):
                     real_path = os.path.join( os.getcwd(), real_path )
@@ -1074,7 +1076,7 @@ class ListMovies():
                     result.extend( filelist(
                         real_path, True, *self.file_ext ) )
                 elif os.path.isfile(real_path):
-                    result.append(arg.decode('utf-8'))
+                    result.append(arg)
         return result
 
     def user_filter(self, files):
@@ -1157,7 +1159,7 @@ class ListMovies():
             keyword = 'm_canonical_title'
         else:
             keyword = 'm_rating'
- 
+
         files.sort( key=lambda f: self.hash_from_path(f)[keyword],\
                 reverse=self.options.reverse)
 
