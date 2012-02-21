@@ -1,7 +1,7 @@
 # lm v0.2
 
-> Copyright (C) 2012  Guillaume Garchery  (polluxxx@gmail.com)
-Copyright (C) 2010  Jérôme Poisson  (goffi@goffi.org)
+> Copyright (C) 2012  Guillaume Garchery  (polluxxx@gmail.com)  
+> Copyright (C) 2010  Jérôme Poisson  (goffi@goffi.org)
 
 lm is a software to list movies, loosely inspired from ls. Extra features
 allow you to download subtitles, and interact with the opensubtitles hash
@@ -26,20 +26,20 @@ along with lm.  If not, see <http://www.gnu.org/licenses/>.
 
 # MANUAL
 
-> 0 WTF?
-1 INSTALLATION
-   1.1 Python packages
-   1.2 Note for Windows users about terminal coloration
-2 HOW TO USE IT
-    2.0 Basic things about script and PATH
-    2.1 How to make it return interesting command lines
-    2.2 Colors Meanings
-    2.3 Principal arguments
-    2.4 Focus on filtering files by genre, actor, size
-    2.5 Download subtitles
-3 MECHANISMS
-4 CREDITS
-5 CHANGES LOG
+> 0 WTF?  
+1 INSTALLATION  
+   1.1 Python packages  
+   1.2 Note for Windows users about terminal coloration  
+2 HOW TO USE IT  
+    2.0 Basic things about script and PATH  
+    2.1 How to make it return interesting command lines  
+    2.2 Colors Meanings  
+    2.3 Principal arguments  
+    2.4 Focus on filtering files by genre, actor, size  
+    2.5 Download subtitles  
+3 MECHANISMS  
+4 CREDITS  
+5 CHANGES LOG  
 
 ## 0. WTF ?
 
@@ -98,10 +98,10 @@ lm.py is a simple python script.
 How can I call it?
 
 * At you convenience, add python and the folder containing lm.py in
-  your path to be able to call it like that: "python lm.py"
-* You can also make this script executable to call it this way "./lm.py"
+  your path to be able to call it like that: `python lm.py`
+* You can also make this script executable to call it this way `./lm.py`
 * you can make an alias for your terminal: in that case, we recommend
-  to start with this default lm call: "lm.py -r @size:500"
+  to start with this default lm call: `lm.py -r @size:500`
 * Or the hard way, (for windows users for exemple):
   `c:/python/python.exe f:/myscriptfolder/lm.py`
 
@@ -239,7 +239,7 @@ You can participate by uploading some.
 
 ### Contact:
 
-> Creator: goffi@goffi.org (http://www.goffi.org)
+> Creator: goffi@goffi.org (http://www.goffi.org)  
 v0.2 : polluxxx@gmail.com (http://redrises.blogspot.com)
 
 ## 5. CHANGES LOG
