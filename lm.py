@@ -845,9 +845,10 @@ class ListMovies():
                 print( '--> movie found  year: %s' % result['year'] )
                 agree = boolean_input('Confirm this result?')
                 if agree:
-                    self.__fill_metadata (cur_hash, result)
+                    self.__fill_metadata(cur_hash, result)
                     self.cache_hash[cur_hash].update(\
-                        { 'g_title':title, 'g_year':year, 'g_unsure':False })
+                        { 'g_title':result['title'], 
+                          'g_year':result['year'], 'g_unsure':False })
                     self.save_cache()
                     print("movie saved")
                     return( True )
