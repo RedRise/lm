@@ -80,6 +80,10 @@ You will need the following packages:
     * to run properly, lm only needs imdb package at its minimal form
     * Note: IMDbPY requires 'lxml' to speed up parsing. If not installed,
        be sure to have 'BeautifulSoup' package.
+- argparse:
+    * usually present in standard library, you may have to install
+      python-argparse package (in Debian 6.0 stable, for example, as pointed
+      by rvrignaud)
 
 ### 1.2 Note for Windows users about terminal coloration
 
