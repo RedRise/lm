@@ -75,6 +75,7 @@ OPENSUBTITLE_DOMAIN     = "http://api.opensubtitles.org/xml-rpc"
 def filelist( dir, recurs=True, *ext):
     """ recursive listing of files in a directory matching extension """
     result = []
+
     alist = [ os.path.abspath(os.path.join(dir,f)) for f in os.listdir( dir )]
 
     result.extend( [ f for f in filter( os.path.isfile, alist ) \
@@ -1065,9 +1066,9 @@ class ListMovies():
             for arg in args:
                 if not arg:
                     continue        #we don't want empty arg
-                arg = arg.decode(sys.getfilesystemencoding())
-
-                real_path = os.path.expanduser(arg) #.decode('utf-8')
+                encoding = sys.getfilesystemencoding()
+                arg = arg.decode( encoding )
+                real_path = os.path.expanduser(arg).decode( encoding )
 
                 if arg == real_path and not os.path.exists(arg):
                     real_path = os.path.join( os.getcwd(), real_path )
