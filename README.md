@@ -249,7 +249,8 @@ v0.2 : polluxxx@gmail.com (http://redrises.blogspot.com)
 ## 5. CHANGES LOG
 
 What's new in version 0.2:
-
++ Add of logging module (--debug parameter). If activated, creates a log file
+  "~/.lm/lm_log.txt"
 + interactive confirmation process (`--confirm` parameter)
 + Subtitles downloads (`--download language` parameter)
 + Use of opensubtitles hash database to find imdb id
