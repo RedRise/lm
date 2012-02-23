@@ -22,19 +22,21 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 import os
+import re
 import sys
+import time
+import imdb
+import zlib
+import struct
+import base64
+import codecs
+import locale
+import logging
 import cPickle
 import argparse
-import struct
 import xmlrpclib
-import time
-import re
-import imdb
-import codecs
-import base64
-import zlib
-from unicodedata import normalize
 from difflib import SequenceMatcher
+from unicodedata import normalize
 
 # windows terminal coloration
 from platform import system
@@ -66,10 +68,29 @@ This software is a command line tool for listing movies using IMDb metadata
 OPENSUBTITLE_USER_AGENT = "lm v2.0"
 OPENSUBTITLE_DOMAIN     = "http://api.opensubtitles.org/xml-rpc"
 
+# ********** LOGGiING ********************************************************
+logger = logging.getLogger("LM UTIL")
+logger.setLevel( logging.INFO )
+logger.addHandler( logging.NullHandler() )
+LOG_FORMAT = "%(asctime)-6s: %(name)s - %(levelname)s - %(message)s"
 
+def consoleLogging( format, level):
+
+    formatter = logging.Formatter( format )
+    consoleLogger = logging.StreamHandler()
+    consoleLogger.setLevel(level)
+    consoleLogger.setFormatter(formatter)
+    logging.getLogger().addHandler(consoleLogger)
+
+def fileLogging( format, level, filename):
+
+    formatter = logging.Formatter( format )
+    fileLogger = logging.FileHandler(filename=filename, mode="w")
+    fileLogger.setLevel(level)
+    fileLogger.setFormatter(formatter)
+    logging.getLogger().addHandler(fileLogger)
 
 # ********** UTILITY FUNCTIONS ***********************************************
-
 # returns all files in dir (and subdir if recurs==True) filter
 # by specified extensions
 def filelist( dir, recurs=True, *ext):
@@ -106,7 +127,6 @@ def hashFile(name):
                 hash += l_value
                 hash = hash & 0xFFFFFFFFFFFFFFFF #to remain as 64bit number
 
-
         f.seek(max(0,filesize-65536),0)
         for x in range(65536/bytesize):
                 buffer = f.read(bytesize)
@@ -137,6 +157,91 @@ def boolean_input(msg):
     while res not in ['y','n']:
         res = raw_input( msg + ' (y/n):').lower()
     return( res=='y')
+
+# ********** ARGUMENTS HANDLER ***********************************************
+def parse_arguments():
+
+    parser = argparse.ArgumentParser(description=ABOUT)
+
+    parser.add_argument('-a','--alphabetical',
+            action="store_true",default=False,
+            help="sort by alphabetical order of title instead of rating")
+    parser.add_argument('-r','--reverse',
+            action="store_true", default=False,
+            help="show media in reverse order")
+    parser.add_argument('-d','--delete_cache',
+            action="store_true", default=False,
+            help="delete targeted files in cache. A confirmation is \
+                    asked. To delete all cache use lm.py cache -d")
+    parser.add_argument('-f','--filter',
+            help="filter @keyword:filter1,filter2@keyword2:filter3, \
+                    @genre:action@size:+500 will look at action movies \
+                    bigger than 500Mb, @size:-100 will look at movies\
+                    smaller than 100Mb, @unsure will filter files not\
+                    found on opensubtitles with a bad match to imdb \
+                    movies")
+    parser.add_argument('-l','--long', action="store_true",
+            help="Show long information on movie")
+    parser.add_argument('-L','--very-long', action="store_true",
+            help="Show full information on movie")
+    parser.add_argument('-o','--outline', action="store_true",
+            help="Show plot outline")
+    parser.add_argument('--confirm', default=False,
+            action="store_true",
+            help="Manually confirm/search selected movies. May be usefull\
+                    to ask for unsure movies only (ie with bad imdb match)\
+                    with '-f @unsure' argument")
+    parser.add_argument('--upload', default=False,
+            action="store_true",
+            help="Individually upload hash info to opensubtitles. Only\
+                    files without opensubtitles correspondance will be\
+                    selected")
+    parser.add_argument('--download',
+            help="Look for available subtitles for specific language.\
+                    Use ISO639-1 codes, like eng/fre/dut/ger")
+    parser.add_argument('-s', '--show-imdb', action="store_true",
+            help="Show IMDb webpage of each movie in default navigator\
+                    (don't use if you're listing a lot of files!)")
+    parser.add_argument('-S', '--show', action="store_true",
+            help="Show a sumup html page, with covers and usefull links")
+    parser.add_argument( 'files', nargs="*",
+            help="media files to check, by default looks at current dir")
+    parser.add_argument('--reset', action="store_true",
+            help="Delete all cache files (use it when corrupted")
+    parser.add_argument('--debug', action="store_true",
+            help="Display debug logging info, and write log message in\
+                     ~/.lm/lm_log.txt")
+    parser.add_argument('--version', action="store_true",
+            help="Display current version")
+
+    options = parser.parse_args()
+
+    args = options.files
+
+    if options.delete_cache +  options.confirm + \
+            options.upload >1 :
+        print("please choose ONE only from upload/confirm/delete")
+        exit(2)
+
+    if options.confirm or options.upload:
+        options.long = True
+
+    # take care of the 'unsure' filter
+    if options.filter:
+        options.filter = \
+                options.filter.replace('unsure','unsure:')
+
+    if options.show or options.show_imdb:
+        import webbrowser
+        global webbrowser
+
+    if not args:
+        if options.confirm:
+            print("You have to explicitly give files when using --confirm")
+            exit(2)
+        args=['.']
+
+    return( (options, args) )
 
 # ********** Exceptions ******************************************************
 class FilterParsingError(Exception):
@@ -178,7 +283,27 @@ class store(dict):
 # ********** MAIN CLASS ******************************************************
 class ListMovies():
 
-    def __init__(self):
+    order_alpha     = False
+    order_reverse   = False
+    filter_phrase   = None
+
+    disp_long       = False
+    disp_very_long  = False
+    disp_outline    = False
+
+    def __init__( self, options=None ):
+
+        if options:
+            self.order_alpha = options.alphabetical
+            self.order_reverse = options.reverse
+            self.filter_phrase = options.filter
+            self.disp_long = options.long
+            self.disp_very_long = options.very_long
+            self.disp_outline = options.outline
+
+        self.log = logging.getLogger("LM")
+        self.log.addHandler( logging.NullHandler() )
+        self.log.info( "LM initialization")
 
         # create hidden directory if needed at ~/.lm/
         cache_dir = os.path.expanduser('~/.lm')
@@ -221,6 +346,7 @@ class ListMovies():
                      '.ps','.qt','.ram','.rm','.rmvb','.swf','.ts','.vfw',
                      '.vid','.video','.viv','.vivo','.vob','.vro','.wm',
                      '.wmv','.wmx','.wrap','.wvx','.wx','.x264','.xvid']
+        self.file_ext = [ unicode(ext) for ext in self.file_ext ]
 
         self.forbidden_words = ['divx','dvdrip','xvid','ts','dvdscr',
                      'cam','dvdscr','xvid','aac','r5']
@@ -257,51 +383,55 @@ class ListMovies():
             }
 
     # ********** CACHE HANDLERS **********************************************
-
     def load_cache_path(self):
+        self.log.info("loading cache_path")
         try:
             with open(self.cache_path_fn,'r') as f:
                 self.cache_path = cPickle.load(f)
+            self.log.info("cache_path file loaded successfully")
         except:
+            self.log.debug("cache_path not loaded ->  empty initilazation")
             self.cache_path = store()
             self.cache_path.static = False
 
     def _save_cache_path(self):
+        self.log.info("saving cache_path")
         with open(self.cache_path_fn,'w') as f:
             cPickle.dump(self.cache_path,f)
+        self.log.debug("cache_path saved")
 
     def load_cache_hash(self):
+        self.log.info("loading cache_hash")
         try:
             with open(self.cache_hash_fn,'r') as f:
                 self.cache_hash = cPickle.load(f)
+            self.log.info("cache_hash file loaded successfully")
         except:
+            self.log.debug("cache_hash not loaded ->  empty initilazation")
             self.cache_hash = store()
             self.cache_hash.static = False
 
     def _save_cache_hash(self):
+        self.log.info("saving cache_hash")
         with open(self.cache_hash_fn,'w') as f:
             cPickle.dump(self.cache_hash,f)
+        self.log.info("cache_hash saved")
 
     def _sync_cache(self):
     # delete self.cache_path items pointing whose hash isnt pointing
     # to an self.cache_hash key
+        self.log.info("synchronizing caches")
         files = [ f for f, v in self.cache_path.iteritems() if \
                     not self.cache_hash.has_key(v['hash']) ]
         for f in files:
             del self.cache_path[f]
-
-        #hashs_remain = [ v['hash'] for v in self.cache_path.values() ]
-        #hashs = [ h for h in self.cache_hash.keys() if h not in hashs_remain]
-
-        #for h in hashs:
-        #    del self.cache_hash[h]
-
 
     def save_cache(self):
     # save cache function
     # save both at same time, after 'consistency' check:
     # every path from cache_path should point to an hash in cache_hash
 
+        self.log.info("saving caches")
         self._sync_cache()
         self._save_cache_path()
         self._save_cache_hash()
@@ -315,6 +445,7 @@ class ListMovies():
         cache_path = self.cache_path
 
         files = [ f for f in files if cache_path.has_key(f)]
+        self.log.debug("%d entries to delete from cache_path" % len(files) )
 
         if len(files)>0:
             for f in files:
@@ -340,87 +471,6 @@ class ListMovies():
                 os.remove(self.cache_hash_fn)
             if os.path.exists(self.html_fn):
                 os.remove(self.html_fn)
-
-    # ********** ARGUMENTS HANDLER *******************************************
-    def parse_arguments(self):
-
-        parser = argparse.ArgumentParser(description=ABOUT)
-
-        parser.add_argument('-a','--alphabetical',
-                action="store_true",default=False,
-                help="sort by alphabetical order of title instead of rating")
-        parser.add_argument('-r','--reverse',
-                action="store_true", default=False,
-                help="show media in reverse order")
-        parser.add_argument('-d','--delete_cache',
-                action="store_true", default=False,
-                help="delete targeted files in cache. A confirmation is \
-                        asked. To delete all cache use lm.py cache -d")
-        parser.add_argument('-f','--filter',
-                help="filter @keyword:filter1,filter2@keyword2:filter3, \
-                        @genre:action@size:+500 will look at action movies \
-                        bigger than 500Mb, @size:-100 will look at movies\
-                        smaller than 100Mb, @unsure will filter files not\
-                        found on opensubtitles with a bad match to imdb \
-                        movies")
-        parser.add_argument('-l','--long', action="store_true",
-                help="Show long information on movie")
-        parser.add_argument('-L','--very-long', action="store_true",
-                help="Show full information on movie")
-        parser.add_argument('-o','--outline', action="store_true",
-                help="Show plot outline")
-        parser.add_argument('--confirm', default=False,
-                action="store_true",
-                help="Manually confirm/search selected movies. May be usefull\
-                        to ask for unsure movies only (ie with bad imdb match)\
-                        with '-f @unsure' argument")
-        parser.add_argument('--upload', default=False,
-                action="store_true",
-                help="Individually upload hash info to opensubtitles. Only\
-                        files without opensubtitles correspondance will be\
-                        selected")
-        parser.add_argument('--download',
-                help="Look for available subtitles for specific language.\
-                        Use ISO639-1 codes, like eng/fre/dut/ger")
-        parser.add_argument('-s', '--show-imdb', action="store_true",
-                help="Show IMDb webpage of each movie in default navigator\
-			(don't use if you're listing a lot of files!)")
-        parser.add_argument('-S', '--show', action="store_true",
-                help="Show a sumup html page, with covers and usefull links")
-        parser.add_argument( 'files', nargs="*",
-                help="media files to check, by default looks at current dir")
-        parser.add_argument('--reset', action="store_true",
-                help="Delete all cache files (use it when corrupted")
-        parser.add_argument('--version', action="store_true",
-                help="Display current version")
-
-        self.options = parser.parse_args()
-        args = self.options.files
-
-        if self.options.delete_cache +  self.options.confirm + \
-                self.options.upload >1 :
-            print("please choose ONE only from upload/confirm/delete")
-            exit(2)
-
-        if self.options.confirm or self.options.upload:
-            self.options.long = True
-
-        # take care of the 'unsure' filter
-        if self.options.filter:
-            self.options.filter = \
-                    self.options.filter.replace('unsure','unsure:')
-
-        if self.options.show or self.options.show_imdb:
-            import webbrowser
-            global webbrowser
-
-        if not args:
-            if self.options.confirm:
-                print("You have to explicitly give files when using --confirm")
-                exit(2)
-            args=['.']
-
-        return args
 
     #
     def flush_out_str(self, out_str):
@@ -453,6 +503,7 @@ class ListMovies():
             if not( cache_path.has_key(path) and \
                     os.path.getmtime(path) < cache_path[path]['last_update']):
 
+                self.log.info("adding new path to cache: %s" % path)
                 cur_hash = hashFile(path)
 
                 if cur_hash in ['SizeError','IOError']: cur_hash = None
@@ -462,6 +513,9 @@ class ListMovies():
 
                 # setting default keys.values in cache
                 if cur_hash and not cache_hash.has_key(cur_hash):
+                    self.log.debug("adding hash entry %s for file: %s" % ( \
+                            str(cur_hash), path ) )
+
                     cache_hash[cur_hash] = store( self.default_hash )
                     cache_hash[cur_hash]['bytesize'] = os.path.getsize(path)
 
@@ -478,7 +532,6 @@ class ListMovies():
                  cache[h]['o_check'] < time.time()-3600*6 ]
 
         data = self.get_info_from_opensubtitles( hashs )
-        update_count = 0
 
         for h in hashs:
 
@@ -493,22 +546,30 @@ class ListMovies():
                                        'o_title':info['MovieName'],
                                         'o_year':info['MovieYear']}
                         cache[h].update( open_info )
-                        update_count += 1
+
                     except:
+                        self.log.debug("faild to update (%s) open info" +\
+                                " with open answer %s " % (str(h),str(info)) )
                         pass
 
         if len(hashs)>0:
             self.save_cache()
 
     # *********** OPENSUBTITLES CONNECTIONS **********************************
-    def status_ok(self,response):
+    def status_ok(self, ans):
+        status = False
         try:
-            if response['status'] == "200 OK":
-                return( True )
+            if ans.has_key("status") and ans["status"] == "200 OK":
+                self.log.debug("OpenSubtitles answer status OK")
+                status = True
             else:
-                raise UserWarning, "opensubtitles response status error"
+                self.log.warning("OpenSubtitles answer status DOWN")
+
         except Exception, e:
-            print(e)
+            self.log.error(str(e))
+
+        finally:
+            return( status )
 
     def login(self, user="", password=""):
         try:
@@ -516,30 +577,35 @@ class ListMovies():
             log    = server.LogIn(user,password,'en',OPENSUBTITLE_USER_AGENT)
 
             if self.status_ok(log):
+                self.log.debug("OpenSubtitles login OK")
                 self.server = server
                 self.token  = log['token']
-
             else:
                 raise LoginError
-        except LoginError:
-            raise LoginError
+
+        except LoginError, e:
+            self.log.warning("OpenSubtitles login DOWN, %s" % str(e) )
+            #raise LoginError
+
         except Exception, e:
-            print( e )
-            raise OpensubtitlesError
+           self.log.error("OpenSubtitles login process DOWN, %s" % str(e))
+
 
     def logout(self):
         if self.token:
             try:
                 self.server.LogOut(self.token)
+                self.log.debug("OpenSubtitles logout OK")
             except Exception, e:
-                print(e)
-                pass
+                self.log.warning("OpenSubtitles logout DOWN, %s" % str(e))
 
     # retrive general info for a list of movie hash
     def get_info_from_opensubtitles( self, hashs ):
             data = {}
 
             if len(hashs)>0:
+                self.log.info("request OpenSubtitle info for %d hashes" %\
+                        len(hashs))
                 try:
                     self.login()
                     for k in range( len(hashs)/150+1 ):
@@ -594,7 +660,7 @@ class ListMovies():
         hashs = []
         for h,v in cache.iteritems():
 
-            p_info       = self.path_from_hash(h)
+            p_info = self.path_from_hash(h)
             if p_info:
                 path, c_time = p_info['path'], p_info['cache_time']
                 updt_after   = not v['o_title'] and v['m_last_update']<c_time
@@ -606,6 +672,7 @@ class ListMovies():
         idx, last_len, total = 1, 0, len(hashs)
 
         for h in hashs:
+            self.log.info("get metadata for hash: %s" % str(h) )
             out_str = u"Getting metadata: [%(index)i/%(nb_movies)i] "
             out_str = out_str % {'index':idx,'nb_movies':total}
             if len(out_str) < last_len:
@@ -621,7 +688,7 @@ class ListMovies():
 
         if len(hashs)>0:
             self.save_cache()
-            print("\n")
+            self.flush_out_str(' '*last_len+'\r')
 
 
     def __get_metadata(self, cur_hash):
@@ -637,31 +704,43 @@ class ListMovies():
             imdb_id = cache_hash[cur_hash]['o_imdb_id']
 
             if imdb_id:
-
+                self.log.info("IMDb id stored from Opensubtites %s" % imdb_id)
                 result = self.i.get_movie(imdb_id)
                 if result:
                     self.__fill_metadata( cur_hash, result )
+                else:
+                    self.log.warning("failed to get movie info from IMDB")
 
             else:
                 # we need to guess a title, from a file pointing to this hash
+                self.log.info("no IMDb id stored from OpenSubtitles")
+
                 path  = self.path_from_hash( cur_hash )['path']
                 guess = self.guessed_title_year( path )
+                self.log.debug("info guessed from filaneme %s" % str(guess) )
+
                 cache_hash[cur_hash].update( guess )
 
                 results = self.i.search_movie( guess['g_title'] )
 
                 if results:
+                    self.log.info("finding best match in answers")
                     best_result, unsure = self.best_match( guess['g_title'],
                             guess['g_year'], results)
+
+                    self.log.debug("best result for %s: %s" % \
+                            (guess['g_title'], best_result.get('title')))
+
                     cache_hash[cur_hash]['g_unsure'] = unsure
                     self.i.update(best_result)
                     self.__fill_metadata( cur_hash, best_result)
                 else:
+                    self.log.info("no result from IMDb, empty metadata")
                     self.__fill_metadata( cur_hash, None )
                     cache_hash[cur_hash]['g_unsure'] = True
 
         except imdb.IMDbError, e:
-            print( "Connexion error, current movie: [%s]" % \
+            print( "Connection error, current movie: [%s]" % \
                     imdb_id if imdb_id else guess['g_title'] )
             print e
             self.save_cache()
@@ -698,14 +777,13 @@ class ListMovies():
 
                 if cur_ratio > _best_ratio:
                     _best_ratio, _best_result = cur_ratio, r
-                    print "ratio ==> %s (for [%s]) %f" % \
-                                    ( other_title, _guessed_title, cur_ratio )
-
+                    self.log.info("ratio ==> %s (for [%s]) %f" % \
+                                    ( other_title, _guessed_title, cur_ratio))
 
         unsure = _best_ratio < 0.7
 
         if _best_ratio < 0.7 and _guessed_year:
-            print "ratio <0.7 & year, we retry on base results"
+            self.log.info( "ratio <0.7 & year, we retry on base results")
             _best_result, unsure = self.best_match(guess_title,None,results)
 
         return _best_result, unsure
@@ -848,7 +926,7 @@ class ListMovies():
                 if agree:
                     self.__fill_metadata(cur_hash, result)
                     self.cache_hash[cur_hash].update(\
-                        { 'g_title':result['title'], 
+                        { 'g_title':result['title'],
                           'g_year':result['year'], 'g_unsure':False })
                     self.save_cache()
                     print("movie saved")
@@ -913,13 +991,13 @@ class ListMovies():
 
     # ********** DOWNLOAD SUBTITLES FROM OPENSUBTITLES ***********************
 
-    def download_subtitle(self,files):
+    def download_subtitle(self, files, language):
 
-        ref, query = self.download_subtitles_query(files)
-
+        ref, query = self.download_subtitles_query( files, language )
+        self.log.info("download subtitles query info %s" % str(query))
 
         if len(query)==0:
-            print( "all subtitles already downloaded!")
+            self.log.info("all subtitles already downloaded!")
             return
 
         self.login()
@@ -928,28 +1006,28 @@ class ListMovies():
         if self.status_ok(sub_refs):
             if sub_refs['data'] != False:
 
-                sub_ids  = self.download_subtitles_filter(ref,sub_refs['data'])
+                sub_ids = self.download_subtitles_filter(ref,sub_refs['data'])
 
-                print( " -- list of subtitlesid to donwload")
-                print( sub_ids )
+                self.log.debug( "list of subtitlesid to donwload: %s" %\
+                        ", ".join( sub_ids ) )
+
                 subs     = self.download_subtitleids( sub_ids )
-
-                self.download_subtitles_write(ref,subs)
+                if subs:
+                    self.download_subtitles_write(ref,subs,language)
 
             else:
-                print( "no subtitles found" )
+                self.log.info( "no subtitles found on OpenSubtitles %s" %\
+                        str(sub_refs) )
 
         else:
-            print( sub_refs )
-            raise OpensubtitlesError
+            self.log.error("Subtitles download failed: %s" % str(sub_refs) )
+#            raise OpensubtitlesError
 
         self.logout()
 
-    def download_subtitles_query(self,files):
+    def download_subtitles_query( self, files, lang ):
     # build a useful info dictionary and the list of queries
     # to be passed as argument to SearchSubtitles XMLRPC call
-
-        lang = self.options.download
 
         # defining query to send
         ref, query = {}, []
@@ -957,7 +1035,8 @@ class ListMovies():
 
             # check if we already downloaded subtitles for this movie
             pattern = lang.upper() + "_LM[\d]{1,}\.srt$"
-            old_subs = [ old for old in filelist(os.path.dirname(f),False) \
+            filedir = os.path.dirname(f).decode(sys.getdefaultencoding())
+            old_subs = [ old for old in filelist(filedir,False) \
                     if re.search(pattern, old) ]
 
             h           = self.cache_path[f]['hash']
@@ -1015,37 +1094,30 @@ class ListMovies():
     def download_subtitleids(self,sub_ids):
     # download, decode, and decompress a list of subtitles
     # @param sub_ids; list of subtitles id
+        subs = None
+
         try:
             result = self.server.DownloadSubtitles(self.token,sub_ids)
         except Exception, e:
-            print(e)
+            self.log.error("OpenSubtitle download sub error" % str(e) )
+            return( None )
 
         if self.status_ok(result):
-
             if result['data'] != 'False':
                 subs = {}
                 for sub in result['data']:
-
                     sub_d = base64.standard_b64decode(sub['data'])
                     sub_d = zlib.decompress( sub_d, 47 )
                     subs[sub['idsubtitlefile']] = sub_d
-            else:
-                print( "Error when downloading subtitles ids, no data")
-                print( result )
-                raise OpensubtitlesError
-        else:
-            print( result['status'] )
-            raise OpensubtitlesError
 
         return(subs)
 
-    def download_subtitles_write(self,ref,subs):
+    def download_subtitles_write(self,ref,subs,lang):
     # Write downloaded subtitles in movies directories with suffixe:
     # _LANG_LM[\d].srt
     # @param red: output of download_subititles_query
     # @param subs: list of decompressed subs [{'IDSubtitleFile':,'Data'}]
 
-        lang = self.options.download
         for k, v in ref.iteritems():
             keep = v['keep']
             if keep:
@@ -1060,30 +1132,38 @@ class ListMovies():
     def get_files(self,args):
     # Return files from args, if isdir -> recursive search
         result = []
+        self.log.info("interpreting file/dir argument")
 
         if args[0]=='cache':
+            self.log.info("loading all cache entries")
             result.extend( self.cache_path.keys() )
         else:
             for arg in args:
                 if not arg:
                     continue        #we don't want empty arg
-                encoding = sys.getfilesystemencoding()
+                encoding = locale.getdefaultlocale()[1]
                 arg = arg.decode( encoding )
-                real_path = os.path.expanduser(arg).decode( encoding )
+
+                real_path = os.path.expanduser(arg)
 
                 if arg == real_path and not os.path.exists(arg):
                     real_path = os.path.join( os.getcwd(), real_path )
 
                 if os.path.isdir(real_path):
+                    self.log.debug("dir to parse: %s" % real_path )
+                    self.log.debug("dir var type: %s" % type(real_path) )
+
                     result.extend( filelist(
                         real_path, True, *self.file_ext ) )
                 elif os.path.isfile(real_path):
                     result.append(arg)
+
         return result
 
     def user_filter(self, files):
     # Filter movies according to user given arguments
-        filt = self.options.filter
+        self.log.info("number of files before filtering: %d" % len(files))
+        filt = self.filter_phrase
         try:
             while filt:
 
@@ -1112,6 +1192,7 @@ class ListMovies():
                 filt = filt[end:] if end else ''
 
                 if filter_type =='size':
+                    self.log.info("filtering by size")
 
                     if (len(keys)>1):
                         raise FilterParsingError
@@ -1125,67 +1206,69 @@ class ListMovies():
                             sign = 1
 
                         keys = float(keys)
+                        self.log.info("filtering key: %s%f" % \
+                                ( "<" if sign==1 else ">", keys))
                     except:
                         raise FilterParsingError
                     files = [ f for f in files if \
                             sign*keys < sign*os.path.getsize(f)/(1020*1024) ]
+
+
                 elif filter_type == 'unsure':
+                    self.log.info("filtering unsure movies")
                     files = [ f for f in files if \
                         self.cache_hash[\
                             self.cache_path[f]['hash']]['g_unsure'] ]
 
                 else:
+                    self.log.info("filtering type: %s" %filter_type )
+                    self.log.info("filtering keys: %s" % ", ".join(keys))
+
                     filter_type = 'm_' + filter_type
                     files = filter( lambda m:\
                         set([key.lower() for
                         key in self.hash_from_path(m)[filter_type]]).\
                                 intersection(keys), files)
         except FilterParsingError:
-            print "Invalid filter ! Please read README for syntax"
-            exit(2)
+            self.log.error("Invalid filter ! Please read README for syntax")
+            files = []
 
-        return files
+        finally:
+            self.log.info("number of files after filtering %d" % len(files))
+            return files
 
     def filter_and_sort_files( self, files):
     # filter the list of files,
     # according to video extensions provided, and user filters
 
-        if self.options.filter:
+        if self.filter_phrase:
             files = self.user_filter(files)
-        if not files:
-            print "No movie found"
-            exit(1)
 
-
-        if self.options.alphabetical:
+        if self.order_alpha:
             keyword = 'm_canonical_title'
         else:
             keyword = 'm_rating'
 
         files.sort( key=lambda f: self.hash_from_path(f)[keyword],\
-                reverse=self.options.reverse)
+                reverse=self.order_reverse)
 
         return(files)
-
 
     def hash_from_path(self,path):
         try:
             cur_hash    = self.cache_path[path]['hash']
             result      = self.cache_hash[cur_hash]
         except:
+            self.log.error("this path doesnt belong to cash_path %s" % path )
             result      = store()
 
         return( result )
 
     # ********** DISPLAYERS **************************************************
     def show_list(self, files):
-        """Show the list of files, using metadata according to arguments"""
-
         for f in files:
             self.pretty_print(f)
 
-        if self.options.show:
-            self.html_print(files)
 
     def pretty_print(self, filename):
     # Print movie with metadata and colors according to arguments
@@ -1210,7 +1293,7 @@ class ListMovies():
                                if h['bytesize'] else None
                       }
 
-        if self.options.very_long:
+        if self.disp_very_long:
             out_str  =u"%(header)s%(title)s (%(b)srating%(e)s: %(rating)s)\n%"
             out_str +="(b)syear%(e)s: %(year)s %(b)sgenre%(e)s: %(genre)s\n%"
             out_str +="(b)sfile%(e)s: %(filename)s %(b)ssize%(e)s: %(size)sMo"
@@ -1229,7 +1312,7 @@ class ListMovies():
                     out_str+=len_cast_header*u' '+actor+'\n'
             out_str += "\n" + self.BLUE + "summary"+self.END+": %s\n---\n" % \
                     h['m_summary']
-        elif self.options.long:
+        elif self.disp_long:
             out_str = u"%(header)s%(title)s (%(year)s,%(rating)s,%(size)sMo) "
             out_str += "[%(b)s%(genre)s%(e)s] from %(director)s: "
             out_str += "%(filename)s\n"
@@ -1237,7 +1320,7 @@ class ListMovies():
         else:
             out_str = u"%(header)s%(title)s (%(filename)s)\n" % values_dict
         sys.stdout.write(out_str.encode('utf-8'))
-        if self.options.outline and h['m_short_summary']:
+        if self.disp_outline and h['m_short_summary']:
             sys.stdout.write(unicode( \
                     '*** ' + h['m_short_summary']+'\n').encode('utf-8'))
 
@@ -1292,20 +1375,40 @@ class ListMovies():
 
 if __name__ == "__main__":
 
-    LM    = ListMovies()
-    args  = LM.parse_arguments()
+    options, args  = parse_arguments()
 
-    if LM.options.reset:
-        LM.reset_cache_files()
+    if options.debug:
+        consoleLogging( LOG_FORMAT, logging.DEBUG )
+
+        rootdir = os.path.expanduser(u"~/.lm")
+        filelog = os.path.join( rootdir, u"lm_log.txt" )
+        if not os.path.exists( rootdir ):
+            os.mkdir( rootdir )
+        fileLogging( LOG_FORMAT, logging.DEBUG, filelog )
+
+        logger.info("argparse namespace: %s" % str(options) )
+        logger.info("arg files type: %s" % \
+                ', '.join([str(type(f)) for f in args]) )
+        logger.info("file system encoding: %s" % sys.getfilesystemencoding())
+        logger.info("system encoding: %s" % sys.getdefaultencoding())
+        logger.info("locale encoding: %s" % locale.getdefaultlocale()[1])
+
+    else:
+        consoleLogging( LOG_FORMAT, logging.ERROR )
+
+    LM  = ListMovies(options)
+
+    if options.version:
+        print( VERSION )
         sys.exit()
 
-    if LM.options.version:
-        print( VERSION )
+    if options.reset:
+        LM.reset_cache_files()
         sys.exit()
 
     files = LM.get_files(args)
 
-    if LM.options.delete_cache:
+    if options.delete_cache:
         LM.delete_cache(files)
         sys.exit()
 
@@ -1314,17 +1417,21 @@ if __name__ == "__main__":
     LM.update_cache_hash_metadata()
     files = LM.filter_and_sort_files(files)
 
-    if LM.options.confirm:
+    if options.confirm:
         LM.manual_confirm(files)
 
-    elif LM.options.upload:
+    elif options.upload:
         LM.upload_to_opensubtitles(files)
 
-    elif LM.options.download:
-        LM.download_subtitle(files)
+    elif options.download:
+        LM.download_subtitle(files, options.download)
 
-    elif LM.options.show_imdb:
+    elif options.show:
+        LM.html_print(files)
+
+    elif options.show_imdb:
         LM.imdb_show(files)
+
     else:
         LM.show_list( files )
 
