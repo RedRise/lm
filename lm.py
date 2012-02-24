@@ -1288,12 +1288,12 @@ class ListMovies():
                        'title':(self.MAGEN if h['o_imdb_id'] \
                                else self.YELLOW)+to_ascii(h['m_title'])+\
                                self.END,
-                       'rating':unicode(h['m_rating']),
+                       'rating':str(h['m_rating']),
                        'year':h['m_year'],
                        'genre':"%s" % ', '.join(h['m_genre']),
                        'filename':os.path.basename(filename),
                        'director':', '.join(h['m_director']),
-                       'size': unicode(int(h['bytesize'] / (1024*1024))) \
+                       'size': str(int(h['bytesize'] / (1024*1024))) \
                                if h['bytesize'] else None
                       }
 
