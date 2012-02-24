@@ -448,6 +448,7 @@ class ListMovies():
     # not pointed by a file anymore
 
         cache_path = self.cache_path
+        cache_hash = self.cache_hash
 
         files = [ f for f in files if cache_path.has_key(f)]
         self.log.debug("%d entries to delete from cache_path" % len(files) )
@@ -460,6 +461,9 @@ class ListMovies():
 
             if confirm:
                 for f in files:
+                    cur_hash = cache_path[f]['hash']
+                    if cache_hash.has_key(cur_hash):
+                        del cache_hash[cur_hash]
                     del cache_path[f]
 
                 self.save_cache()
