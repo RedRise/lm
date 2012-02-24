@@ -142,7 +142,7 @@ And we didnt find any good match in IMDb results neither. We stronly
 recommend you to manually confirm this movie with the shell interactive
 command: `lm.py YOUR_DIR -f @unsure --confirm`
 
-### 2.3 Principal argument
+### 2.3 Principal arguments
 
     -l : returns a more complete description, with YEAR, RATE, FILE SIZE
     -L : returns a VERY detailled view with synopsis. Ideal for ONE movie.
@@ -161,10 +161,14 @@ command: `lm.py YOUR_DIR -f @unsure --confirm`
          `python lm.py YOUR_DIR -d`, all movie files in `YOUR_DIR` will
          be deleted from cache. Note: A confirmation is asked before
          any deletion. To delete all cache call: `python lm.py cache -d`
+    --debug: activate debug mode, in terminal but also in file 
+             `~/.lm/lm_log.txt`
 
     HTML DISPLAY
-    -s : will open you web browser and display results with rates, cover,
+    -S : will open you web browser and display results with rates, cover,
          links to trailers, and IMDb movie page.
+    -s : will open all IMDb related pages (don't use with a lot a files)
+
 
 ### 2.4 Filters
 
