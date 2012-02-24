@@ -69,9 +69,13 @@ OPENSUBTITLE_USER_AGENT = "lm v2.0"
 OPENSUBTITLE_DOMAIN     = "http://api.opensubtitles.org/xml-rpc"
 
 # ********** LOGGiING ********************************************************
+class NullHandler(logging.Handler):
+    def emit(self, record):
+        pass
+
 logger = logging.getLogger("LM UTIL")
 logger.setLevel( logging.INFO )
-logger.addHandler( logging.NullHandler() )
+logger.addHandler( NullHandler() )
 LOG_FORMAT = "%(asctime)-6s: %(name)s - %(levelname)s - %(message)s"
 
 def consoleLogging( format, level):
@@ -302,7 +306,7 @@ class ListMovies():
             self.disp_outline = options.outline
 
         self.log = logging.getLogger("LM")
-        self.log.addHandler( logging.NullHandler() )
+        self.log.addHandler( NullHandler() )
         self.log.info( "LM initialization")
 
         # create hidden directory if needed at ~/.lm/
