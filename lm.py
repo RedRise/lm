@@ -306,6 +306,7 @@ class ListMovies():
             self.disp_outline = options.outline
 
         self.log = logging.getLogger("LM")
+        self.log.setLevel( logging.INFO )
         self.log.addHandler( NullHandler() )
         self.log.info( "LM initialization")
 
