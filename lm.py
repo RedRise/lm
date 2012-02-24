@@ -1146,7 +1146,7 @@ class ListMovies():
                 if not arg:
                     continue        #we don't want empty arg
                 encoding = locale.getdefaultlocale()[1]
-                arg = arg.decode( encoding )
+                if encoding: arg = arg.decode( encoding )
 
                 real_path = os.path.expanduser(arg)
 
