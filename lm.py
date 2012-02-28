@@ -521,7 +521,7 @@ class ListMovies():
                                    'last_update':time.time() } )
 
                 # setting default keys.values in cache
-                if cur_hash and not cache_hash.has_key(cur_hash):
+                if not cache_hash.has_key(cur_hash):
                     self.log.debug("adding hash entry %s for file: %s" % ( \
                             str(cur_hash), path ) )
 
