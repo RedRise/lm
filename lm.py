@@ -403,7 +403,7 @@ class ListMovies():
         self.log.info("saving cache_path")
         with open(self.cache_path_fn,'w') as f:
             cPickle.dump(self.cache_path,f)
-        self.log.debug("cache_path saved")
+        self.log.info("cache_path saved")
 
     def load_cache_hash(self):
         self.log.info("loading cache_hash")
@@ -1044,7 +1044,7 @@ class ListMovies():
 
             # check if we already downloaded subtitles for this movie
             pattern = lang.upper() + "_LM[\d]{1,}\.srt$"
-            filedir = os.path.dirname(f).decode(sys.getdefaultencoding())
+            filedir = os.path.dirname(f)
             old_subs = [ old for old in filelist(filedir,False) \
                     if re.search(pattern, old) ]
 
@@ -1393,7 +1393,7 @@ if __name__ == "__main__":
         filelog = os.path.join( rootdir, u"lm_log.txt" )
         if not os.path.exists( rootdir ):
             os.mkdir( rootdir )
-        fileLogging( LOG_FORMAT, logging.DEBUG, filelog )
+        fileLogging( LOG_FORMAT, logging.INFO, filelog )
 
         logger.info("argparse namespace: %s" % str(options) )
         logger.info("arg files type: %s" % \
