@@ -243,7 +243,7 @@ def parse_arguments():
         if options.confirm:
             print("You have to explicitly give files when using --confirm")
             exit(2)
-        args=['.']
+        args=[u'.']
 
     return( (options, args) )
 
