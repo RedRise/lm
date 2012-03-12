@@ -306,8 +306,8 @@ class ListMovies():
             self.disp_outline = options.outline
 
         self.log = logging.getLogger("LM")
-        self.log.setLevel( logging.INFO )
         self.log.addHandler( NullHandler() )
+        self.log.setLevel( logging.DEBUG)
         self.log.info( "LM initialization")
 
         # create hidden directory if needed at ~/.lm/
@@ -1154,9 +1154,11 @@ class ListMovies():
                 if encoding: arg = arg.decode( encoding )
 
                 real_path = os.path.expanduser(arg)
+                self.log.info("path expanded: %s" % real_path )
 
                 if arg == real_path and not os.path.exists(arg):
                     real_path = os.path.join( os.getcwd(), real_path )
+                    self.log.info("real path: %s" % real_path )
 
                 if os.path.isdir(real_path):
                     self.log.debug("dir to parse: %s" % real_path )
@@ -1387,13 +1389,13 @@ if __name__ == "__main__":
     options, args  = parse_arguments()
 
     if options.debug:
-        consoleLogging( LOG_FORMAT, logging.DEBUG )
+        consoleLogging( LOG_FORMAT, logging.DEBUG)
 
         rootdir = os.path.expanduser(u"~/.lm")
         filelog = os.path.join( rootdir, u"lm_log.txt" )
         if not os.path.exists( rootdir ):
             os.mkdir( rootdir )
-        fileLogging( LOG_FORMAT, logging.INFO, filelog )
+        fileLogging( LOG_FORMAT, logging.DEBUG, filelog )
 
         logger.info("argparse namespace: %s" % str(options) )
         logger.info("arg files type: %s" % \
