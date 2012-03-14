@@ -107,7 +107,8 @@ def filelist( dir, recurs=True, *ext):
         if (not ext or (os.path.splitext(f)[1].lower() in ext)) ] )
     if recurs:
         for f in [ d for d in alist if not os.path.isfile(d)]:
-            result.extend( filelist( f, True, *ext) )
+            if os.path.exists(f):
+                result.extend( filelist( f, True, *ext) )
     return result
 
 # opensubtitle hash function
@@ -1157,7 +1158,7 @@ class ListMovies():
                 self.log.info("path expanded: %s" % real_path )
 
                 if arg == real_path and not os.path.exists(arg):
-                    real_path = os.path.join( os.getcwd(), real_path )
+                    real_path = os.path.join( os.getcwdu(), real_path )
                     self.log.info("real path: %s" % real_path )
 
                 if os.path.isdir(real_path):
