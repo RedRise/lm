@@ -223,6 +223,7 @@ def parse_arguments():
 
     args = options.files
 
+
     if options.delete_cache +  options.confirm + \
             options.upload >1 :
         print("please choose ONE only from upload/confirm/delete")
@@ -233,8 +234,8 @@ def parse_arguments():
 
     # take care of the 'unsure' filter
     if options.filter:
-        options.filter = \
-                options.filter.replace('unsure','unsure:')
+        pass
+        #options.filter_list = filter_phrase_to_list( options.filter )
 
     if options.show or options.show_imdb:
         import webbrowser
@@ -247,6 +248,56 @@ def parse_arguments():
         args=[u'.']
 
     return( (options, args) )
+
+def filter_phrase_to_list( filter_phrase ):
+
+    result = []
+    filter_types = {    'genre':'genre',
+                     'director':'director',
+                        'actor':'cast',
+                         'size':'size',
+                      'country':'countries',
+                       'unsure':'unsure' }
+
+    filter_phrase = filter_phrase.lower()
+
+    if filter_phrase[0] != "@": raise FilterParsingError
+
+    flt1 = filter_phrase.split('@')
+
+    for f in flt1[1:]:
+
+        fs = f.split(":")
+        if len(fs)==1 and fs[0]=="unsure":
+            fs.append("")
+
+        if len(fs)!=2: raise FilterParsingError
+
+        ftype, fkeys = fs
+
+        if not filter_types.has_key(ftype):
+            raise FilterParsingError
+        else:
+            ftype = filter_types[ftype]
+
+        fkeys = fkeys.split(",")
+
+        row = {"type":ftype, "keys":fkeys }
+
+        if ftype=="size":
+            if len(fkeys)>1: raise FilterParsingError
+
+            try:
+                row["keys"] = float(fkeys[0])
+
+            except:
+                raise FilterParsingError
+
+        result.append( row )
+
+    return result
+
+
 
 # ********** Exceptions ******************************************************
 class FilterParsingError(Exception):
@@ -1222,7 +1273,7 @@ class ListMovies():
 
                         keys = float(keys)
                         self.log.info("filtering key: %s%f" % \
-                                ( "<" if sign==1 else ">", keys))
+                                ( "> " if sign==1 else "< ", keys))
                     except:
                         raise FilterParsingError
                     files = [ f for f in files if \
