@@ -49,7 +49,7 @@ if system().lower()=="windows":
 
 # ********** GLOBAL VARIABLES ************************************************
 NAME    = 'lm (list movies)'
-VERSION	= '0.2'
+VERSION	= '0.4'
 ABOUT 	= NAME+" v"+VERSION+"""
 
 ---
