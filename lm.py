@@ -1170,6 +1170,9 @@ class ListMovies():
                 elif os.path.isfile(real_path):
                     result.append(arg)
 
+        result = [ r for r in result if \
+                os.path.exists(r) and os.path.getsize(r)>0L ]
+
         return result
 
     def user_filter(self, files):
