@@ -73,35 +73,32 @@ class NullHandler(logging.Handler):
     def emit(self, record):
         pass
 
-logger = logging.getLogger("LM UTIL")
-logger.setLevel( logging.ERROR )
-logger.addHandler( NullHandler() )
 LOG_FORMAT = "%(asctime)-6s: %(name)s - %(levelname)s - %(message)s"
+logging.basicConfig( format=LOG_FORMAT, level=logging.ERROR)
+logger = logging.getLogger("LM_UTIL")
 
 def consoleLogging( format, level):
-
-    formatter = logging.Formatter( format )
-    consoleLogger = logging.StreamHandler()
-    consoleLogger.setLevel(level)
-    consoleLogger.setFormatter(formatter)
-    logging.getLogger().addHandler( consoleLogger )
+    logger.setLevel( level )
 
 def fileLogging( format, level, filename):
-
     formatter = logging.Formatter( format )
     fileLogger = logging.FileHandler(filename=filename, mode="w")
-    fileLogger.setLevel(level)
     fileLogger.setFormatter(formatter)
-    logging.getLogger().addHandler(fileLogger)
+    logger.setLevel( level )
+    logger.addHandler(fileLogger)
 
 # ********** UTILITY FUNCTIONS ***********************************************
 # returns all files in dir (and subdir if recurs==True) filter
 # by specified extensions
 def filelist( dir, recurs=True, *ext):
     """ recursive listing of files in a directory matching extension """
-    result = []
+    result, alist = [], []
 
-    alist = [ os.path.abspath(os.path.join(dir,f)) for f in os.listdir( dir )]
+    for f in os.listdir(dir):
+        if not isinstance(f,unicode):
+            logger.warning("%s filename not properly encoded" % f)
+        else:
+            alist.append( os.path.abspath(os.path.join(dir,f)) )
 
     result.extend( [ f for f in filter( os.path.isfile, alist ) \
         if (not ext or (os.path.splitext(f)[1].lower() in ext)) ] )
@@ -313,7 +310,14 @@ class FilterParsingError(Exception):
         return( res )
 
 class LoginError(Exception):
-    pass
+    def __init__(self,msg=None):
+        self.msg = msg
+
+    def __str__(self):
+        res = "LoginError"
+        if self.msg:
+            res += (" [detail: %s]" % self.msg)
+        return res
 
 class OpensubtitlesError(Exception):
     pass
@@ -355,7 +359,7 @@ class ListMovies():
     disp_very_long  = False
     disp_outline    = False
 
-    def __init__( self, options=None ):
+    def __init__( self, options=None, level=logging.ERROR ):
 
         if options:
             self.order_alpha = options.alphabetical
@@ -368,8 +372,8 @@ class ListMovies():
 
         self.log = logging.getLogger("LM")
         self.log.addHandler( NullHandler() )
-        self.log.setLevel( logging.DEBUG)
-        self.log.info( "LM initialization")
+        self.log.setLevel( level )
+        self.log.info( "LM initialization" )
 
         # create hidden directory if needed at ~/.lm/
         cache_dir = os.path.expanduser('~/.lm')
@@ -651,14 +655,13 @@ class ListMovies():
                 self.server = server
                 self.token  = log['token']
             else:
-                raise LoginError
+                raise LoginError(str(log))
 
         except LoginError, e:
-            self.log.warning("OpenSubtitles login DOWN, %s" % str(e) )
-            #raise LoginError
+            self.log.warning( str(e)  )
 
         except Exception, e:
-           self.log.error("OpenSubtitles login process DOWN, %s" % str(e))
+            self.log.error("OpenSubtitles login process DOWN: %s" % str(e))
 
 
     def logout(self):
@@ -667,7 +670,8 @@ class ListMovies():
                 self.server.LogOut(self.token)
                 self.log.debug("OpenSubtitles logout OK")
             except Exception, e:
-                self.log.warning("OpenSubtitles logout DOWN, %s" % str(e))
+                self.log.warning("OpenSubtitles logout process DOWN, %s" % \
+                        str(e))
 
     # retrive general info for a list of movie hash
     def get_info_from_opensubtitles( self, hashs ):
@@ -683,8 +687,9 @@ class ListMovies():
                                 hashs[150*k:(150*(k+1))] )
                         data.update( res['data'] )
                     self.logout()
-                except:
-                    print("Error when retrieving hash from opensubtitles")
+                except LoginError:
+                    self.log.debug("Error when retrieving hash " + \
+                            "from opensubtitles")
                     pass
 
                 for k, v in data.iteritems():
@@ -1455,13 +1460,13 @@ if __name__ == "__main__":
     options, args  = parse_arguments()
 
     if options.debug:
-        consoleLogging( LOG_FORMAT, logging.DEBUG)
+        consoleLogging( LOG_FORMAT, logging.INFO)
 
         rootdir = os.path.expanduser(u"~/.lm")
         filelog = os.path.join( rootdir, u"lm_log.txt" )
         if not os.path.exists( rootdir ):
             os.mkdir( rootdir )
-        fileLogging( LOG_FORMAT, logging.DEBUG, filelog )
+        fileLogging( LOG_FORMAT, logging.INFO, filelog )
 
         logger.info("argparse namespace: %s" % str(options) )
         logger.info("arg files type: %s" % \
@@ -1473,7 +1478,8 @@ if __name__ == "__main__":
     else:
         consoleLogging( LOG_FORMAT, logging.ERROR )
 
-    LM  = ListMovies(options)
+    LM  = ListMovies(options, logging.INFO if options.debug \
+                else logging.ERROR)
 
     if options.version:
         print( VERSION )
