@@ -74,7 +74,7 @@ class NullHandler(logging.Handler):
         pass
 
 logger = logging.getLogger("LM UTIL")
-logger.setLevel( logging.INFO )
+logger.setLevel( logging.ERROR )
 logger.addHandler( NullHandler() )
 LOG_FORMAT = "%(asctime)-6s: %(name)s - %(levelname)s - %(message)s"
 
@@ -84,7 +84,7 @@ def consoleLogging( format, level):
     consoleLogger = logging.StreamHandler()
     consoleLogger.setLevel(level)
     consoleLogger.setFormatter(formatter)
-    logging.getLogger().addHandler(consoleLogger)
+    logging.getLogger().addHandler( consoleLogger )
 
 def fileLogging( format, level, filename):
 
@@ -226,7 +226,7 @@ def parse_arguments():
 
     if options.delete_cache +  options.confirm + \
             options.upload >1 :
-        print("please choose ONE only from upload/confirm/delete")
+        logger.error("please choose ONE only from upload/confirm/delete")
         exit(2)
 
     if options.confirm or options.upload:
@@ -234,8 +234,12 @@ def parse_arguments():
 
     # take care of the 'unsure' filter
     if options.filter:
-        pass
-        #options.filter_list = filter_phrase_to_list( options.filter )
+        try:
+            options.filter_dict = decode_filter_phrase( options.filter )
+
+        except FilterParsingError as e:
+            logger.error( str(e) )
+            exit(2)
 
     if options.show or options.show_imdb:
         import webbrowser
@@ -243,15 +247,15 @@ def parse_arguments():
 
     if not args:
         if options.confirm:
-            print("You have to explicitly give files when using --confirm")
+            logger.error("You have to specify give files when using --confirm")
             exit(2)
         args=[u'.']
 
     return( (options, args) )
 
-def filter_phrase_to_list( filter_phrase ):
-
-    result = []
+def decode_filter_phrase( filter_phrase ):
+    # transforms the filter param argument to a more convenient form
+    result = {}
     filter_types = {    'genre':'genre',
                      'director':'director',
                         'actor':'cast',
@@ -261,39 +265,36 @@ def filter_phrase_to_list( filter_phrase ):
 
     filter_phrase = filter_phrase.lower()
 
-    if filter_phrase[0] != "@": raise FilterParsingError
+    if filter_phrase[0] != "@":
+        raise FilterParsingError("filter should begin with @")
 
     flt1 = filter_phrase.split('@')
 
     for f in flt1[1:]:
 
         fs = f.split(":")
-        if len(fs)==1 and fs[0]=="unsure":
-            fs.append("")
+        if len(fs)==1 and fs[0]=="unsure": fs.append("")
 
         if len(fs)!=2: raise FilterParsingError
 
         ftype, fkeys = fs
 
         if not filter_types.has_key(ftype):
-            raise FilterParsingError
+            raise FilterParsingError("Keyword not recognized")
         else:
             ftype = filter_types[ftype]
 
         fkeys = fkeys.split(",")
 
-        row = {"type":ftype, "keys":fkeys }
-
         if ftype=="size":
-            if len(fkeys)>1: raise FilterParsingError
-
             try:
-                row["keys"] = float(fkeys[0])
-
+               fkeys = [float(k) for k in fkeys]
             except:
-                raise FilterParsingError
+                raise FilterParsingError("Wrong syntax for size filtering")
 
-        result.append( row )
+        if not result.has_key(ftype): result[ftype] = []
+
+        result[ftype].extend( fkeys )
 
     return result
 
@@ -301,14 +302,21 @@ def filter_phrase_to_list( filter_phrase ):
 
 # ********** Exceptions ******************************************************
 class FilterParsingError(Exception):
-    pass
+
+    def __init__(self, msg=None):
+        self.msg = msg
+
+    def __str__(self):
+        res = "Error when parsing filter, please read help for syntax"
+        if self.msg:
+            res += (" [detail: %s]" % self.msg)
+        return( res )
 
 class LoginError(Exception):
     pass
 
 class OpensubtitlesError(Exception):
     pass
-
 
 # fixed keys dictionary, to avoid error on small "key/value" data storage
 class store(dict):
@@ -353,6 +361,7 @@ class ListMovies():
             self.order_alpha = options.alphabetical
             self.order_reverse = options.reverse
             self.filter_phrase = options.filter
+            self.filter_dict = options.filter_dict if options.filter else None
             self.disp_long = options.long
             self.disp_very_long = options.very_long
             self.disp_outline = options.outline
@@ -1440,6 +1449,8 @@ class ListMovies():
                 webbrowser.open_new_tab(imdb.imdbURL_movie_main % h['m_id'])
 
 if __name__ == "__main__":
+
+    consoleLogging( LOG_FORMAT, logging.ERROR )
 
     options, args  = parse_arguments()
 
