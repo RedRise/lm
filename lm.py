@@ -206,6 +206,8 @@ def parse_arguments():
                     (don't use if you're listing a lot of files!)")
     parser.add_argument('-S', '--show', action="store_true",
             help="Show a sumup html page, with covers and usefull links")
+    parser.add_argument('--html-build', action="store_true",
+            help="Build HTML sumup page without display")
     parser.add_argument( 'files', nargs="*",
             help="media files to check, by default looks at current dir")
     parser.add_argument('--reset', action="store_true",
@@ -601,7 +603,7 @@ class ListMovies():
     # again only 6 hours after
 
         cache = self.cache_hash
-        hashs = [ h for h in cache.keys() if
+        hashs = [ h for h in cache.keys() if h and
             not cache[h]['o_title'] and \
                  cache[h]['o_check'] < time.time()-3600*6 ]
 
@@ -1404,7 +1406,7 @@ class ListMovies():
             sys.stdout.write(unicode( \
                     '*** ' + h['m_short_summary']+'\n').encode('utf-8'))
 
-    def html_print(self, files):
+    def html_build(self, files):
     # Show the list of files, using metadata according to arguments
 
         cell = u"<td width=200 height=250><a href=\"%(imdb)s\">\
@@ -1445,6 +1447,8 @@ class ListMovies():
                     out_file.write( finalcell )
                 count += 1
             out_file.write("</tr></table>")
+
+    def html_show(self):
         webbrowser.open_new_tab( "file://%s" % self.html_fn )
 
     def imdb_show(self, files):
@@ -1509,8 +1513,10 @@ if __name__ == "__main__":
     elif options.download:
         LM.download_subtitle(files, options.download)
 
-    elif options.show:
-        LM.html_print(files)
+    elif options.show or options.html_build:
+        LM.html_build(files)
+        if options.show:
+            LM.html_show()
 
     elif options.show_imdb:
         LM.imdb_show(files)
